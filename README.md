@@ -7,20 +7,22 @@ storycraft my-course.md
 # → my-course.zip  (uploadable to Moodle, TalentLMS, Cornerstone, LearnUpon, …)
 ```
 
-Built for instructional designers who want to skip the storyboard → Storyline → publish cycle for rapid prototypes, simple compliance modules, and localised variants.
+A small internal tool extracted from the Kidvento authoring pipeline and open-sourced as a teaching artifact. Not pitched as a Storyline replacement — Storyline is excellent at what it does. Storycraft fills the narrow slot where a full visual-authoring workflow is overkill: compliance modules, induction decks, and localised variants where the storyboard *is* the course and the slides exist mostly to carry text, narration, and a knowledge check.
 
-## Why this exists
+It is also the reference build that exercises every [scorm-kit](https://github.com/parthdhanani/scorm-kit) subcommand. If you want to see what a clean SCORM 1.2 package looks like coming out of a deterministic build, run `storycraft examples/posh-awareness.md` and feed the zip into `scorm-kit lint`.
 
-Most teams treat the storyboard and the published course as two artifacts. Reviewers comment on a doc, the developer rebuilds it in Storyline, and any subsequent edit becomes a two-place update. Storycraft makes the storyboard the **source of truth** and the SCORM package a deterministic build artifact.
+## Why a separate tool
+
+Most teams treat the storyboard and the published course as two artifacts. Reviewers comment on a doc, the developer rebuilds it in Storyline, and any subsequent edit becomes a two-place update. For the modules where that round-trip is the bottleneck — not the visual design — Storycraft collapses it: the storyboard is the source of truth and the SCORM package is a deterministic build artifact (same input, byte-identical zip).
 
 | | Before | With Storycraft |
 |---|---|---|
-| Storyboard → first reviewable build | a half-day in Storyline | seconds |
-| Edit a typo found in QA | re-open Storyline, re-publish, re-zip | edit Markdown, rerun |
-| Build 6 localised variants | 6 Storyline files, manual sync | 6 Markdown files, one build script |
-| Output runs in any SCORM 1.2 LMS | ✔ via Storyline | ✔ — same |
+| Storyboard → first reviewable build | a half-day in the authoring tool | seconds |
+| Edit a typo found in QA | re-open authoring tool, re-publish, re-zip | edit Markdown, rerun |
+| Build 6 localised variants | 6 source files, manual sync | 6 Markdown files, one build script |
+| Output runs in any SCORM 1.2 LMS | ✔ | ✔ — same |
 
-It does **not** replace Storyline for visual-heavy or interaction-rich courses. It replaces it for the chunk of corporate modules that are essentially "slides + narration + a knowledge check + maybe a scenario."
+It does **not** replace Storyline (or Rise, or Captivate) for visual-heavy or interaction-rich courses. It replaces the *Markdown-doc-then-rebuild* loop for the chunk of corporate modules that are essentially "slides + narration + a knowledge check + maybe a scenario."
 
 ## Quick start
 
