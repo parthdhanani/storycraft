@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="{{LANG}}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{TITLE}}</title>
+  <link rel="stylesheet" href="player.css">
+  <script>window.__COURSE__ = {{COURSE_JSON}};</script>
+</head>
+<body>
+  <header>
+    <h1 id="course-title">{{TITLE}}</h1>
+    <span class="branding" aria-hidden="true">Storycraft</span>
+  </header>
+  <div id="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+    <div id="progress"></div>
+  </div>
+  <main id="stage" tabindex="-1"></main>
+  <footer>Powered by Storycraft · SCORM 1.2 compliant</footer>
+
+  <script src="scorm12-api.js"></script>
+  <script src="player.js"></script>
+</body>
+</html>

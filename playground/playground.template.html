@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Storycraft Playground — Markdown → SCORM 1.2</title>
+  <meta name="description" content="Paste a Markdown storyboard, get a SCORM 1.2 package. Pure client-side. Open-source, no upload, no signup.">
+  <style>
+    :root { --bg:#0f1115; --panel:#181a21; --ink:#e8eaf0; --dim:#a5acba; --accent:#6ea8ff; --accent-deep:#4b86d9; --ok:#5bd28b; --err:#ff7a7a; --line:#262a33; --code:#0c0e13; }
+    @media (prefers-color-scheme: light) {
+      :root { --bg:#fafbfc; --panel:#fff; --ink:#15171b; --dim:#545a66; --accent:#1f6feb; --accent-deep:#0a4cb0; --ok:#1f883d; --err:#cf222e; --line:#d8dde3; --code:#f3f5f7; }
+    }
+    * { box-sizing: border-box; }
+    html, body { margin:0; padding:0; height:100%; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif; background:var(--bg); color:var(--ink); line-height:1.5; }
+    header { padding:20px 28px; border-bottom:1px solid var(--line); background:var(--panel); display:flex; align-items:center; justify-content:space-between; gap:24px; flex-wrap:wrap; }
+    header h1 { margin:0; font-size:1.2rem; font-weight:700; }
+    header .tagline { color:var(--dim); font-size:0.85rem; margin:0; }
+    .head-meta { display:flex; gap:12px; align-items:center; }
+    .pill { padding:4px 10px; border-radius:999px; background:var(--code); font-size:0.75rem; font-family:ui-monospace,Menlo,Consolas,monospace; color:var(--dim); }
+    main { display:grid; grid-template-columns:1fr 1fr; gap:0; height:calc(100% - 64px); }
+    @media (max-width:880px) { main { grid-template-columns:1fr; } }
+    .pane { display:flex; flex-direction:column; min-height:0; border-right:1px solid var(--line); }
+    .pane:last-child { border-right:none; }
+    .pane h2 { margin:0; padding:14px 20px; font-size:0.85rem; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; color:var(--dim); border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; gap:10px; }
+    .pane h2 .controls { display:flex; gap:8px; }
+    textarea { flex:1; width:100%; padding:18px 20px; background:var(--code); color:var(--ink); border:0; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:0.85rem; line-height:1.6; resize:none; outline:none; tab-size:2; }
+    textarea:focus { outline:2px solid var(--accent); outline-offset:-2px; }
+    .output { flex:1; overflow:auto; padding:20px; font-size:0.88rem; }
+    .preview-slide { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:18px 20px; margin-bottom:12px; }
+    .preview-slide h3 { margin:0 0 8px; font-size:1rem; display:flex; align-items:center; gap:10px; }
+    .preview-slide .badge { font-size:0.65rem; padding:2px 8px; border-radius:999px; background:var(--code); color:var(--dim); font-family:ui-monospace,monospace; text-transform:uppercase; letter-spacing:0.05em; font-weight:700; }
+    .preview-slide .badge.check { background:rgba(91,210,139,0.15); color:var(--ok); }
+    .preview-slide .badge.branch { background:rgba(110,168,255,0.15); color:var(--accent); }
+    .preview-slide .narration { color:var(--dim); font-style:italic; font-size:0.85rem; margin:6px 0; padding-left:10px; border-left:2px solid var(--accent); }
+    .preview-slide .q { font-weight:600; margin:8px 0 4px; }
+    .preview-slide .choice { padding:4px 8px; font-size:0.8rem; color:var(--dim); }
+    .preview-slide .choice.correct { color:var(--ok); }
+    .actions { padding:14px 20px; border-top:1px solid var(--line); background:var(--panel); display:flex; gap:8px; flex-wrap:wrap; }
+    .btn { font:inherit; font-size:0.85rem; font-weight:600; padding:9px 16px; border-radius:8px; border:1.5px solid var(--line); background:transparent; color:var(--ink); cursor:pointer; transition:all 140ms ease; }
+    .btn:hover { border-color:var(--accent); }
+    .btn.primary { background:var(--accent); color:white; border-color:var(--accent); }
+    .btn.primary:hover { background:var(--accent-deep); }
+    .btn:disabled { opacity:0.5; cursor:not-allowed; }
+    .status { padding:10px 20px; font-size:0.85rem; border-top:1px solid var(--line); background:var(--panel); }
+    .status.err { color:var(--err); }
+    .status.ok { color:var(--ok); }
+    .examples { display:flex; gap:6px; flex-wrap:wrap; }
+    .example-btn { font-size:0.75rem; padding:4px 10px; border-radius:999px; border:1px solid var(--line); background:transparent; color:var(--dim); cursor:pointer; }
+    .example-btn:hover { color:var(--accent); border-color:var(--accent); }
+    a { color:var(--accent); }
+    .footer-note { font-size:0.78rem; color:var(--dim); padding:12px 20px 18px; }
+    .empty { color:var(--dim); padding:24px; text-align:center; font-size:0.9rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Storycraft Playground</h1>
+      <p class="tagline">Markdown storyboard → SCORM 1.2 package · 100% client-side · no upload</p>
+    </div>
+    <div class="head-meta">
+      <span class="pill">SCORM 1.2</span>
+      <span class="pill">xAPI ready</span>
+      <span class="pill">WCAG 2.1</span>
+      <a href="../" class="btn">← Back to portfolio</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="pane">
+      <h2>
+        <span>Storyboard (Markdown)</span>
+        <span class="controls examples">
+          <button class="example-btn" data-example="posh">POSH</button>
+          <button class="example-btn" data-example="manager">Manager</button>
+          <button class="example-btn" data-example="oncall">On-call</button>
+          <button class="example-btn" data-example="math">K-12 math</button>
+        </span>
+      </h2>
+      <textarea id="md" spellcheck="false"></textarea>
+      <div class="actions">
+        <button class="btn primary" id="build-btn">⤓ Build SCORM zip</button>
+        <button class="btn" id="preview-btn">Preview</button>
+        <button class="btn" id="launch-btn">Launch (no LMS)</button>
+        <span style="flex:1"></span>
+        <span class="pill" id="stats">—</span>
+      </div>
+      <div class="status" id="status">Ready. Try one of the example storyboards above, or write your own.</div>
+    </section>
+
+    <section class="pane">
+      <h2>Structured preview</h2>
+      <div class="output" id="preview">
+        <div class="empty">A preview of the parsed slides will appear here.</div>
+      </div>
+      <div class="footer-note">
+        The same Markdown also exports a SCORM 1.2 zip via the CLI:
+        <code>node src/storycraft.js my-course.md</code>. The runtime in the zip is the same one used here — pure DOM, no external dependencies, works in any SCORM 1.2 LMS.
+      </div>
+    </section>
+  </main>
+
+  <!-- vendored parser -->
+  <script>/*__PARSER__*/</script>
+  <!-- vendored manifest generator -->
+  <script>/*__MANIFEST__*/</script>
+  <!-- runtime file payloads (base64) -->
+  <script>/*__RUNTIME_FILES__*/</script>
+  <!-- JSZip (vendored from CDN; falls back gracefully if blocked) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+  <script>
+    // ---------- examples ----------
+    var EXAMPLES = {
+      posh: '---\\ntitle: Workplace Respect — POSH Awareness\\npassing_score: 70\\nlanguage: en\\n---\\n\\n## Slide: Welcome\\n[Narration] Welcome to this 15-minute course on workplace respect.\\n\\nBy the end you will be able to:\\n\\n- Recognise behaviour covered under the POSH Act, 2013\\n- Initiate a complaint through the correct channel\\n\\n## Check: Recognising harassment\\n[Q] A colleague repeatedly sends jokes with sexual innuendo to a co-worker over Slack, despite being asked to stop. Is this harassment under POSH?\\n[A*] Yes — repeated, unwelcome verbal/written conduct of a sexual nature qualifies.\\n[A] No — Slack messages aren\\'t covered.\\n[Feedback correct] Correct. POSH covers any medium of workplace communication.\\n[Feedback incorrect] Reconsider. POSH applies wherever work happens, including digital channels.\\n\\n## Branch: The hallway moment\\n[Prompt] You overhear a senior colleague making a suggestive comment to a new hire. The new hire looks uncomfortable but does not respond. What do you do?\\n[Option: Speak up in the moment → moment-speak]\\n[Option: Check in privately afterwards → moment-check]\\n\\n## Slide: You speak up\\n[Id] moment-speak\\nDirect intervention can be powerful — when safe.\\n\\n## Slide: You check in privately\\n[Id] moment-check\\nQuiet support is often what the recipient needs most.\\n\\n## Slide: Course complete\\n[Narration] You\\'ve completed the module.',
+      manager: '---\\ntitle: What You Didn\\'t Say — Communication for First-Time Managers\\npassing_score: 75\\n---\\n\\n## Slide: Before we start\\n[Narration] This module is about the things you don\\'t say. The pause. The "sounds good." The Slack message you typed and didn\\'t send.\\n\\n## Slide: A scenario\\nPriya, four months on your team, sent you her project plan Tuesday. You said "thanks Priya" and moved on. Today she has DMed: "was the plan okay?" You have 90 seconds.\\n\\n## Branch: How do you reply?\\n[Prompt] What do you do?\\n[Option: Quick "yes all good" → reply-quick]\\n[Option: Take 5 min, write specifics → reply-specific]\\n\\n## Slide: The quick reply\\n[Id] reply-quick\\nPolite. Empty calories. Praise has a half-life.\\n\\n## Slide: The specific response\\n[Id] reply-specific\\nThree minutes well spent. The next meeting will survive.\\n\\n## Check: What was Priya actually asking for?\\n[Q] When a four-month report asks "was it okay?", what are they usually asking for?\\n[A] Approval\\n[A*] Specific calibration\\n[A] Reassurance\\n[Feedback correct] Right. They want to know what to do again and what to do differently.\\n\\n## Slide: Course complete\\nThanks for working through this.',
+      oncall: '---\\ntitle: The First Page — Incident Response\\npassing_score: 75\\n---\\n\\n## Slide: This is not the runbook\\n[Narration] The runbook lives in your wiki. This module is about the seven minutes before you open it.\\n\\nThe goal of the first minute is not to fix anything. The goal is orientation — service, signal, scope.\\n\\n## Slide: Page one\\n2:47 a.m. payments-api error rate 100% in eu-west-1. What do you do first?\\n\\n## Branch: First move\\n[Prompt] First action?\\n[Option: Open the runbook → page1-runbook]\\n[Option: Check the deploy log → page1-deploy]\\n[Option: Page a second responder → page1-second]\\n\\n## Slide: Runbook first\\n[Id] page1-runbook\\nDefensible. Usually right. At 100% error rate, "did we just deploy" is the cheaper hypothesis.\\n\\n## Slide: Deploy log first\\n[Id] page1-deploy\\nRight move at 2:47 a.m. The cheapest possible explanation for "everything is broken" is "someone just deployed."\\n\\n## Slide: Page second responder\\n[Id] page1-second\\nOften premature. You can still describe the incident in two sentences. Page the second responder when you can\\'t.\\n\\n## Check: Through-line\\n[Q] What is the most important first action?\\n[A] Acknowledge and notify\\n[A*] Read the alert and form a one-sentence read of what is happening\\n[A] Open the runbook\\n[Feedback correct] Right. Orientation first.\\n\\n## Slide: Course complete\\nIncidents are supposed to be non-events.',
+      math: '---\\ntitle: Why Negative × Negative = Positive\\npassing_score: 80\\n---\\n\\n## Slide: The question\\n[Narration] You\\'ve been told that negative × negative = positive is "just a rule." It is not.\\n\\n## Slide: We start with\\n- 3 × 4 = 12\\n- 3 × 0 = 0\\n- The distributive property: 3 × (4 + 2) = 3×4 + 3×2\\n\\n## Slide: Positive × negative\\nFrom 4 + (-4) = 0, multiply both sides by 3:\\n\\n3 × (4 + (-4)) = 0\\n\\nDistribute: 12 + 3 × (-4) = 0. So 3 × (-4) must be -12.\\n\\n## Check: Apply it\\n[Q] Using the same trick, what must 2 × (-5) equal?\\n[A] 10\\n[A*] -10\\n[A] 0\\n[Feedback correct] Exactly. 10 + 2×(-5) = 0, so 2×(-5) = -10.\\n\\n## Slide: Negative × negative\\nNow start with 3 + (-3) = 0, multiply by (-4): -12 + (-4)×(-3) = 0. So (-4)×(-3) = +12.\\n\\n## Check: Best explanation\\n[Q] Best way to explain why (-2)×(-3) = +6?\\n[A] Two negatives make a positive — it\\'s a rule\\n[A*] Distributive + zero-product — derived, not declared\\n[A] Negatives cancel\\n[Feedback correct] Right. Every rule in mathematics has a reason; go find it.\\n\\n## Slide: Course complete\\nExplain it to someone tonight. That\\'s the real test.',
+    };
+
+    // ---------- elements ----------
+    var $md = document.getElementById("md");
+    var $preview = document.getElementById("preview");
+    var $status = document.getElementById("status");
+    var $stats = document.getElementById("stats");
+    var $buildBtn = document.getElementById("build-btn");
+    var $previewBtn = document.getElementById("preview-btn");
+    var $launchBtn = document.getElementById("launch-btn");
+
+    document.querySelectorAll(".example-btn").forEach(function (b) {
+      b.addEventListener("click", function () {
+        $md.value = EXAMPLES[b.dataset.example].replace(/\\\\n/g, "\\n");
+        renderPreview();
+      });
+    });
+
+    // initialise with the POSH example
+    $md.value = EXAMPLES.posh.replace(/\\\\n/g, "\\n");
+
+    // ---------- core flow ----------
+    function getCourse() {
+      var parsed = window.__SC_parse($md.value);
+      var meta = parsed.meta || {};
+      return {
+        id: "course",
+        title: meta.title || "Untitled course",
+        duration: meta.duration || null,
+        passing_score: meta.passing_score || 80,
+        language: meta.language || "en",
+        xapi: meta.xapi || null,
+        slides: parsed.slides,
+      };
+    }
+
+    function validate(course) {
+      var errs = [];
+      if (!course.slides.length) errs.push("No slides parsed — did you use '## Slide:' headings?");
+      var ids = {};
+      course.slides.forEach(function (s) {
+        if (ids[s.id]) errs.push("Duplicate slide id: " + s.id);
+        ids[s.id] = true;
+        if (s.type === "check") {
+          if (!s.question) errs.push("Slide '" + s.id + "': missing [Q]");
+          if (!s.choices.length) errs.push("Slide '" + s.id + "': no [A]");
+          if (!s.choices.some(function (c) { return c.correct; }))
+            errs.push("Slide '" + s.id + "': no correct [A*]");
+        }
+        if (s.type === "branch" && !s.options.length) errs.push("Slide '" + s.id + "': no [Option:]");
+      });
+      return errs;
+    }
+
+    function setStatus(msg, kind) {
+      $status.textContent = msg;
+      $status.className = "status " + (kind || "");
+    }
+
+    function renderPreview() {
+      try {
+        var c = getCourse();
+        var errs = validate(c);
+        var n = c.slides.length;
+        var checks = c.slides.filter(function (s) { return s.type === "check"; }).length;
+        var branches = c.slides.filter(function (s) { return s.type === "branch"; }).length;
+        $stats.textContent = n + " slides · " + checks + " checks · " + branches + " branches";
+
+        if (errs.length) {
+          $preview.innerHTML = '<div class="empty" style="color:var(--err)">' +
+            errs.map(function (e) { return "✗ " + e; }).join("<br>") + '</div>';
+          setStatus("Storyboard has " + errs.length + " issue(s) — fix before building.", "err");
+          $buildBtn.disabled = true;
+          return;
+        }
+
+        $buildBtn.disabled = false;
+        var html = c.slides.map(function (s) {
+          var badge = '<span class="badge ' + s.type + '">' + s.type + '</span>';
+          var body = "";
+          if (s.narration) body += '<p class="narration">' + escape(s.narration) + '</p>';
+          if (s.question) body += '<p class="q">Q: ' + escape(s.question) + '</p>';
+          if (s.choices && s.choices.length) {
+            body += '<ul style="list-style:none;padding:0;margin:0">' +
+              s.choices.map(function (c, i) {
+                return '<li class="choice' + (c.correct ? " correct" : "") + '">' +
+                  String.fromCharCode(65 + i) + ". " + escape(c.text) +
+                  (c.correct ? " ✓" : "") + '</li>';
+              }).join("") +
+              '</ul>';
+          }
+          if (s.prompt) body += '<p>' + escape(s.prompt) + '</p>';
+          if (s.options && s.options.length) {
+            body += '<ul style="list-style:none;padding:0;margin:0">' +
+              s.options.map(function (o) {
+                return '<li class="choice">→ ' + escape(o.label) + ' <span style="color:var(--dim);font-family:ui-monospace,monospace">→ ' + escape(o.goto) + '</span></li>';
+              }).join("") +
+              '</ul>';
+          }
+          return '<div class="preview-slide"><h3>' + badge + escape(s.title || s.id) + '</h3>' + body + '</div>';
+        }).join("");
+        $preview.innerHTML = html;
+        setStatus("✓ Parsed " + n + " slides cleanly.", "ok");
+      } catch (e) {
+        $preview.innerHTML = '<div class="empty" style="color:var(--err)">Parser error: ' + escape(e.message) + '</div>';
+        setStatus("Parser error: " + e.message, "err");
+      }
+    }
+
+    function escape(s) {
+      return String(s == null ? "" : s)
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
+    function decodeBase64(b64) {
+      var bin = atob(b64);
+      var bytes = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      return bytes;
+    }
+
+    function buildZip() {
+      if (typeof JSZip === "undefined") {
+        setStatus("JSZip failed to load — try refreshing, or use the CLI: `node src/storycraft.js <file.md>`", "err");
+        return;
+      }
+      var c = getCourse();
+      var errs = validate(c);
+      if (errs.length) { setStatus("Fix " + errs.length + " issue(s) first.", "err"); return; }
+
+      var zip = new JSZip();
+
+      // Runtime files (verbatim from CLI build)
+      Object.keys(window.__SC_RUNTIME).forEach(function (name) {
+        if (name === "player.html") return; // we templatise this below
+        zip.file(name, decodeBase64(window.__SC_RUNTIME[name]));
+      });
+
+      // Render player.html with course JSON injected
+      var tmpl = new TextDecoder().decode(decodeBase64(window.__SC_RUNTIME["player.html"]));
+      var html = tmpl
+        .replace(/{{LANG}}/g, c.language)
+        .replace(/{{TITLE}}/g, escape(c.title))
+        .replace(/{{COURSE_JSON}}/g, JSON.stringify(c));
+      zip.file("player.html", html);
+
+      // Manifest
+      var files = ["player.html", "player.css", "player.js", "scorm12-api.js"];
+      zip.file("imsmanifest.xml", window.__SC_manifest(c, { files: files }));
+
+      setStatus("Zipping…", "");
+      zip.generateAsync({ type: "blob", compression: "DEFLATE" }).then(function (blob) {
+        var url = URL.createObjectURL(blob);
+        var slug = (c.title || "course").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "course";
+        var a = document.createElement("a");
+        a.href = url;
+        a.download = slug + ".zip";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        setStatus("✓ " + slug + ".zip (" + Math.round(blob.size / 1024) + " KB) ready — upload to any SCORM 1.2 LMS.", "ok");
+      });
+    }
+
+    function launchInWindow() {
+      var c = getCourse();
+      var errs = validate(c);
+      if (errs.length) { setStatus("Fix " + errs.length + " issue(s) first.", "err"); return; }
+
+      var css = new TextDecoder().decode(decodeBase64(window.__SC_RUNTIME["player.css"]));
+      var apiJs = new TextDecoder().decode(decodeBase64(window.__SC_RUNTIME["scorm12-api.js"]));
+      var playerJs = new TextDecoder().decode(decodeBase64(window.__SC_RUNTIME["player.js"]));
+
+      var doc = '<!doctype html><html lang="' + c.language + '"><head><meta charset="utf-8"><title>' + escape(c.title) + '</title>' +
+        '<style>' + css + '</style>' +
+        '<script>window.__COURSE__ = ' + JSON.stringify(c) + ';<\/script>' +
+        '</head><body>' +
+        '<header><h1 id="course-title">' + escape(c.title) + '</h1><span class="branding" aria-hidden="true">Storycraft</span></header>' +
+        '<div id="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="progress"></div></div>' +
+        '<main id="stage" tabindex="-1"></main>' +
+        '<footer>Powered by Storycraft · SCORM 1.2 compliant</footer>' +
+        '<script>' + apiJs + '<\/script>' +
+        '<script>' + playerJs + '<\/script>' +
+        '</body></html>';
+
+      var blob = new Blob([doc], { type: "text/html" });
+      window.open(URL.createObjectURL(blob), "_blank");
+      setStatus("✓ Launched in a new tab — running without an LMS (SCORM calls are no-ops).", "ok");
+    }
+
+    $buildBtn.addEventListener("click", buildZip);
+    $previewBtn.addEventListener("click", renderPreview);
+    $launchBtn.addEventListener("click", launchInWindow);
+    $md.addEventListener("input", debounce(renderPreview, 350));
+
+    function debounce(fn, ms) { var t; return function () { clearTimeout(t); t = setTimeout(fn, ms); }; }
+
+    renderPreview();
+  </script>
+</body>
+</html>

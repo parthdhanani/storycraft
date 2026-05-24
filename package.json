@@ -1,0 +1,50 @@
+{
+  "name": "storycraft",
+  "version": "0.2.0",
+  "description": "Markdown storyboard → SCORM 1.2 package builder. CLI + browser playground.",
+  "main": "src/storycraft.js",
+  "bin": {
+    "storycraft": "src/storycraft.js"
+  },
+  "scripts": {
+    "build": "node src/storycraft.js",
+    "playground": "node build-playground.js",
+    "example": "node src/storycraft.js examples/posh-awareness.md",
+    "example:hi": "node src/storycraft.js examples/posh-awareness.md --locale hi",
+    "test": "node test/run.js"
+  },
+  "keywords": [
+    "scorm",
+    "scorm-1.2",
+    "xapi",
+    "elearning",
+    "instructional-design",
+    "moodle",
+    "wcag",
+    "markdown"
+  ],
+  "author": {
+    "name": "Parth Dhanani",
+    "email": "parth1707ster@gmail.com",
+    "url": "https://psidex.com"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "src/",
+    "runtime/",
+    "examples/posh-awareness.md",
+    "examples/posh-awareness.hi.md",
+    "examples/what-you-didnt-say.md",
+    "examples/the-first-page.md",
+    "examples/why-negatives-multiply.md",
+    "README.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/parthdhanani/storycraft.git"
+  }
+}

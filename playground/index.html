@@ -1,0 +1,648 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Storycraft Playground — Markdown → SCORM 1.2</title>
+  <meta name="description" content="Paste a Markdown storyboard, get a SCORM 1.2 package. Pure client-side. Open-source, no upload, no signup.">
+  <style>
+    :root { --bg:#0f1115; --panel:#181a21; --ink:#e8eaf0; --dim:#a5acba; --accent:#6ea8ff; --accent-deep:#4b86d9; --ok:#5bd28b; --err:#ff7a7a; --line:#262a33; --code:#0c0e13; }
+    @media (prefers-color-scheme: light) {
+      :root { --bg:#fafbfc; --panel:#fff; --ink:#15171b; --dim:#545a66; --accent:#1f6feb; --accent-deep:#0a4cb0; --ok:#1f883d; --err:#cf222e; --line:#d8dde3; --code:#f3f5f7; }
+    }
+    * { box-sizing: border-box; }
+    html, body { margin:0; padding:0; height:100%; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif; background:var(--bg); color:var(--ink); line-height:1.5; }
+    header { padding:20px 28px; border-bottom:1px solid var(--line); background:var(--panel); display:flex; align-items:center; justify-content:space-between; gap:24px; flex-wrap:wrap; }
+    header h1 { margin:0; font-size:1.2rem; font-weight:700; }
+    header .tagline { color:var(--dim); font-size:0.85rem; margin:0; }
+    .head-meta { display:flex; gap:12px; align-items:center; }
+    .pill { padding:4px 10px; border-radius:999px; background:var(--code); font-size:0.75rem; font-family:ui-monospace,Menlo,Consolas,monospace; color:var(--dim); }
+    main { display:grid; grid-template-columns:1fr 1fr; gap:0; height:calc(100% - 64px); }
+    @media (max-width:880px) { main { grid-template-columns:1fr; } }
+    .pane { display:flex; flex-direction:column; min-height:0; border-right:1px solid var(--line); }
+    .pane:last-child { border-right:none; }
+    .pane h2 { margin:0; padding:14px 20px; font-size:0.85rem; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; color:var(--dim); border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; gap:10px; }
+    .pane h2 .controls { display:flex; gap:8px; }
+    textarea { flex:1; width:100%; padding:18px 20px; background:var(--code); color:var(--ink); border:0; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:0.85rem; line-height:1.6; resize:none; outline:none; tab-size:2; }
+    textarea:focus { outline:2px solid var(--accent); outline-offset:-2px; }
+    .output { flex:1; overflow:auto; padding:20px; font-size:0.88rem; }
+    .preview-slide { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:18px 20px; margin-bottom:12px; }
+    .preview-slide h3 { margin:0 0 8px; font-size:1rem; display:flex; align-items:center; gap:10px; }
+    .preview-slide .badge { font-size:0.65rem; padding:2px 8px; border-radius:999px; background:var(--code); color:var(--dim); font-family:ui-monospace,monospace; text-transform:uppercase; letter-spacing:0.05em; font-weight:700; }
+    .preview-slide .badge.check { background:rgba(91,210,139,0.15); color:var(--ok); }
+    .preview-slide .badge.branch { background:rgba(110,168,255,0.15); color:var(--accent); }
+    .preview-slide .narration { color:var(--dim); font-style:italic; font-size:0.85rem; margin:6px 0; padding-left:10px; border-left:2px solid var(--accent); }
+    .preview-slide .q { font-weight:600; margin:8px 0 4px; }
+    .preview-slide .choice { padding:4px 8px; font-size:0.8rem; color:var(--dim); }
+    .preview-slide .choice.correct { color:var(--ok); }
+    .actions { padding:14px 20px; border-top:1px solid var(--line); background:var(--panel); display:flex; gap:8px; flex-wrap:wrap; }
+    .btn { font:inherit; font-size:0.85rem; font-weight:600; padding:9px 16px; border-radius:8px; border:1.5px solid var(--line); background:transparent; color:var(--ink); cursor:pointer; transition:all 140ms ease; }
+    .btn:hover { border-color:var(--accent); }
+    .btn.primary { background:var(--accent); color:white; border-color:var(--accent); }
+    .btn.primary:hover { background:var(--accent-deep); }
+    .btn:disabled { opacity:0.5; cursor:not-allowed; }
+    .status { padding:10px 20px; font-size:0.85rem; border-top:1px solid var(--line); background:var(--panel); }
+    .status.err { color:var(--err); }
+    .status.ok { color:var(--ok); }
+    .examples { display:flex; gap:6px; flex-wrap:wrap; }
+    .example-btn { font-size:0.75rem; padding:4px 10px; border-radius:999px; border:1px solid var(--line); background:transparent; color:var(--dim); cursor:pointer; }
+    .example-btn:hover { color:var(--accent); border-color:var(--accent); }
+    a { color:var(--accent); }
+    .footer-note { font-size:0.78rem; color:var(--dim); padding:12px 20px 18px; }
+    .empty { color:var(--dim); padding:24px; text-align:center; font-size:0.9rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Storycraft Playground</h1>
+      <p class="tagline">Markdown storyboard → SCORM 1.2 package · 100% client-side · no upload</p>
+    </div>
+    <div class="head-meta">
+      <span class="pill">SCORM 1.2</span>
+      <span class="pill">xAPI ready</span>
+      <span class="pill">WCAG 2.1</span>
+      <a href="../" class="btn">← Back to portfolio</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="pane">
+      <h2>
+        <span>Storyboard (Markdown)</span>
+        <span class="controls examples">
+          <button class="example-btn" data-example="posh">POSH</button>
+          <button class="example-btn" data-example="manager">Manager</button>
+          <button class="example-btn" data-example="oncall">On-call</button>
+          <button class="example-btn" data-example="math">K-12 math</button>
+        </span>
+      </h2>
+      <textarea id="md" spellcheck="false"></textarea>
+      <div class="actions">
+        <button class="btn primary" id="build-btn">⤓ Build SCORM zip</button>
+        <button class="btn" id="preview-btn">Preview</button>
+        <button class="btn" id="launch-btn">Launch (no LMS)</button>
+        <span style="flex:1"></span>
+        <span class="pill" id="stats">—</span>
+      </div>
+      <div class="status" id="status">Ready. Try one of the example storyboards above, or write your own.</div>
+    </section>
+
+    <section class="pane">
+      <h2>Structured preview</h2>
+      <div class="output" id="preview">
+        <div class="empty">A preview of the parsed slides will appear here.</div>
+      </div>
+      <div class="footer-note">
+        The same Markdown also exports a SCORM 1.2 zip via the CLI:
+        <code>node src/storycraft.js my-course.md</code>. The runtime in the zip is the same one used here — pure DOM, no external dependencies, works in any SCORM 1.2 LMS.
+      </div>
+    </section>
+  </main>
+
+  <!-- vendored parser -->
+  <script>/*
+ * Storycraft markdown storyboard parser.
+ *
+ * Grammar (informal):
+ *
+ *   ---
+ *   <YAML-ish frontmatter: title, duration, passing_score, language, xapi.endpoint>
+ *   ---
+ *
+ *   ## Slide: <slide title>                  → linear content slide
+ *   ## Check: <slide title>                  → knowledge-check slide
+ *   ## Branch: <slide title>                 → branching scenario slide
+ *
+ *   Inside each slide, recognized directives (one per line):
+ *     [Narration] <text>
+ *     [Image: <src> | alt: <alt>]
+ *     [Q] <question>                         → check-only
+ *     [A*] <correct answer>                  → check-only, * marks correct
+ *     [A]  <wrong answer>
+ *     [Feedback correct] <text>              → check-only
+ *     [Feedback incorrect] <text>            → check-only
+ *     [Points] <n>                           → check-only, default 1
+ *     [Prompt] <text>                        → branch-only
+ *     [Option: <label> → <slide-id>]         → branch-only (one per line)
+ *     [Id] <slide-id>                        → override auto-generated id
+ *
+ *   Anything else inside a Slide is treated as body markdown (rendered with a
+ *   minimal subset: paragraphs, **bold**, *italic*, lists, inline code).
+ *
+ * Output: { meta, slides: [{ id, type, title, ... }, ...] }
+ */
+
+"use strict";
+
+function slugify(s) {
+  return String(s || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60) || "slide";
+}
+
+function parseFrontmatter(text) {
+  var m = text.match(/^---\s*\n([\s\S]*?)\n---\s*\n?/);
+  if (!m) return { meta: {}, body: text };
+  var meta = {};
+  m[1].split(/\n/).forEach(function (line) {
+    var mm = line.match(/^\s*([\w.]+)\s*:\s*(.+?)\s*$/);
+    if (!mm) return;
+    var key = mm[1];
+    var val = mm[2];
+    if (/^\d+$/.test(val)) val = parseInt(val, 10);
+    setNested(meta, key, val);
+  });
+  return { meta: meta, body: text.slice(m[0].length) };
+}
+
+function setNested(obj, dottedKey, val) {
+  var parts = dottedKey.split(".");
+  var cur = obj;
+  for (var i = 0; i < parts.length - 1; i++) {
+    if (!cur[parts[i]]) cur[parts[i]] = {};
+    cur = cur[parts[i]];
+  }
+  cur[parts[parts.length - 1]] = val;
+}
+
+// Tiny inline-markdown to HTML — keeps output predictable and safe.
+function renderInline(s) {
+  return escapeHtml(s)
+    .replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*([^*\n]+)\*/g, "<em>$1</em>")
+    .replace(/`([^`\n]+)`/g, "<code>$1</code>");
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function renderBody(lines) {
+  var out = [];
+  var listBuf = null; // { type: 'ul'|'ol', items: [] }
+
+  function flushList() {
+    if (!listBuf) return;
+    out.push("<" + listBuf.type + ">");
+    listBuf.items.forEach(function (it) { out.push("<li>" + renderInline(it) + "</li>"); });
+    out.push("</" + listBuf.type + ">");
+    listBuf = null;
+  }
+
+  var paraBuf = [];
+  function flushPara() {
+    if (paraBuf.length) {
+      out.push("<p>" + paraBuf.map(renderInline).join(" ") + "</p>");
+      paraBuf = [];
+    }
+  }
+
+  lines.forEach(function (raw) {
+    var line = raw.replace(/\s+$/, "");
+    if (!line.trim()) { flushPara(); flushList(); return; }
+    var mUl = line.match(/^\s*[-*]\s+(.*)/);
+    var mOl = line.match(/^\s*\d+\.\s+(.*)/);
+    if (mUl) {
+      flushPara();
+      if (!listBuf || listBuf.type !== "ul") { flushList(); listBuf = { type: "ul", items: [] }; }
+      listBuf.items.push(mUl[1]);
+    } else if (mOl) {
+      flushPara();
+      if (!listBuf || listBuf.type !== "ol") { flushList(); listBuf = { type: "ol", items: [] }; }
+      listBuf.items.push(mOl[1]);
+    } else {
+      flushList();
+      paraBuf.push(line.trim());
+    }
+  });
+  flushPara();
+  flushList();
+  return out.join("\n");
+}
+
+function parse(text) {
+  var fm = parseFrontmatter(text);
+  var lines = fm.body.split(/\n/);
+
+  // Tokenize into slide groups
+  var slides = [];
+  var current = null;
+  var bodyBuf = [];
+
+  function flushBody() {
+    if (!current) return;
+    // Body lines are the non-directive lines
+    var contentLines = bodyBuf;
+    bodyBuf = [];
+    if (current.type === "content" && contentLines.length) {
+      current.body = renderBody(contentLines);
+    } else if (contentLines.some(function (l) { return l.trim(); })) {
+      // For check/branch slides, leftover lines become "body" too
+      current.body = renderBody(contentLines);
+    }
+  }
+
+  lines.forEach(function (raw) {
+    var line = raw;
+    var head = line.match(/^##\s*(Slide|Check|Branch)\s*:\s*(.+?)\s*$/i);
+    if (head) {
+      flushBody();
+      if (current) slides.push(current);
+      var typeWord = head[1].toLowerCase();
+      var typeMap = { slide: "content", check: "check", branch: "branch" };
+      current = {
+        id: slugify(head[2]) + "-" + (slides.length + 1),
+        type: typeMap[typeWord],
+        title: head[2],
+        choices: [],
+        options: [],
+      };
+      return;
+    }
+    if (!current) return; // skip preamble lines
+
+    var d;
+    if ((d = line.match(/^\s*\[Id\]\s*(.+?)\s*$/i))) {
+      current.id = slugify(d[1]);
+      return;
+    }
+    if ((d = line.match(/^\s*\[Narration\]\s*(.+?)\s*$/i))) {
+      current.narration = d[1];
+      return;
+    }
+    if ((d = line.match(/^\s*\[Image:\s*([^|\]]+?)(?:\s*\|\s*alt:\s*([^\]]+?))?\s*\]\s*$/i))) {
+      current.image = { src: d[1].trim(), alt: (d[2] || "").trim() };
+      return;
+    }
+    if ((d = line.match(/^\s*\[Q\]\s*(.+?)\s*$/i))) {
+      current.question = d[1];
+      return;
+    }
+    if ((d = line.match(/^\s*\[A(\*?)\]\s*(.+?)\s*$/i))) {
+      current.choices.push({ text: d[2], correct: d[1] === "*" });
+      return;
+    }
+    if ((d = line.match(/^\s*\[Feedback\s+correct\]\s*(.+?)\s*$/i))) {
+      current.feedback_correct = d[1];
+      return;
+    }
+    if ((d = line.match(/^\s*\[Feedback\s+incorrect\]\s*(.+?)\s*$/i))) {
+      current.feedback_incorrect = d[1];
+      return;
+    }
+    if ((d = line.match(/^\s*\[Points\]\s*(\d+)\s*$/i))) {
+      current.points = parseInt(d[1], 10);
+      return;
+    }
+    if ((d = line.match(/^\s*\[Prompt\]\s*(.+?)\s*$/i))) {
+      current.prompt = d[1];
+      return;
+    }
+    if ((d = line.match(/^\s*\[Option:\s*(.+?)\s*(?:→|->)\s*([\w-]+)\s*\]\s*$/i))) {
+      current.options.push({ label: d[1].trim(), goto: slugify(d[2]) });
+      return;
+    }
+    // Body line
+    bodyBuf.push(line);
+  });
+  flushBody();
+  if (current) slides.push(current);
+
+  // Resolve branch [Option] gotos: parser stored already-slugified ids; map
+  // them to actual slide ids (which include a "-N" disambiguator).
+  var branchTargets = new Set();
+  slides.forEach(function (s) {
+    if (s.type !== "branch") return;
+    s.options.forEach(function (opt) {
+      var match = slides.find(function (x) { return x.id === opt.goto; });
+      if (!match) match = slides.find(function (x) { return x.id.indexOf(opt.goto + "-") === 0; });
+      if (match) opt.goto = match.id;
+      branchTargets.add(opt.goto);
+    });
+  });
+
+  // Compute linear navigation, treating branch outcomes as siblings that all
+  // converge to the first non-outcome slide after their group. Outcome slides
+  // get no "prev" — going back to a branch decision via a back button would
+  // break the scenario flow.
+  // Land on the next slide that is either a regular content/check slide or a
+  // branch decision — but skip past branch *outcomes* (they're reached only by
+  // taking a branch option).
+  function advanceNext(fromIdx) {
+    for (var k = fromIdx; k < slides.length; k++) {
+      if (!branchTargets.has(slides[k].id)) return slides[k].id;
+    }
+    return null;
+  }
+  // Land on the previous reachable non-outcome slide. Stop at a branch (you
+  // can't reverse a decision).
+  function advancePrev(idx) {
+    for (var k = idx - 1; k >= 0; k--) {
+      if (slides[k].type === "branch") return null;
+      if (branchTargets.has(slides[k].id)) continue;
+      return slides[k].id;
+    }
+    return null;
+  }
+  for (var i = 0; i < slides.length; i++) {
+    var s = slides[i];
+    if (s.type === "branch") continue; // branch has options, not next/prev
+    if (branchTargets.has(s.id)) {
+      // outcome slide: no back; next converges past sibling outcomes
+      s.next = advanceNext(i + 1);
+    } else {
+      var p = advancePrev(i);
+      if (p) s.prev = p;
+      s.next = advanceNext(i + 1);
+    }
+  }
+
+  return {
+    meta: fm.meta,
+    slides: slides,
+  };
+}
+
+
+window.__SC_parse = parse; window.__SC_slugify = slugify;</script>
+  <!-- vendored manifest generator -->
+  <script>/*
+ * SCORM 1.2 imsmanifest.xml generator.
+ *
+ * Reference: ADL SCORM 1.2 Content Aggregation Model, sect. 3 (Content Packaging)
+ * Produces a single-SCO manifest pointing at runtime/player.html.
+ */
+"use strict";
+
+function escape(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function generate(course, opts) {
+  opts = opts || {};
+  var id = "storycraft-" + (course.id || "course");
+  var title = escape(course.title || "Untitled course");
+  var version = opts.version || "1.0";
+  var files = (opts.files || []).map(function (f) {
+    return '      <file href="' + escape(f) + '"/>';
+  }).join("\n");
+
+  return [
+    '<?xml version="1.0" standalone="no"?>',
+    '<manifest identifier="' + escape(id) + '" version="' + escape(version) + '"',
+    '  xmlns="http://www.imsproject.org/xsd/imscp_rootv1p1p2"',
+    '  xmlns:adlcp="http://www.adlnet.org/xsd/adlcp_rootv1p2"',
+    '  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"',
+    '  xsi:schemaLocation="http://www.imsproject.org/xsd/imscp_rootv1p1p2 imscp_rootv1p1p2.xsd',
+    '                      http://www.imsglobal.org/xsd/imsmd_rootv1p2p1 imsmd_rootv1p2p1.xsd',
+    '                      http://www.adlnet.org/xsd/adlcp_rootv1p2 adlcp_rootv1p2.xsd">',
+    '  <metadata>',
+    '    <schema>ADL SCORM</schema>',
+    '    <schemaversion>1.2</schemaversion>',
+    '  </metadata>',
+    '  <organizations default="ORG-1">',
+    '    <organization identifier="ORG-1">',
+    '      <title>' + title + '</title>',
+    '      <item identifier="ITEM-1" identifierref="RES-1" isvisible="true">',
+    '        <title>' + title + '</title>',
+    '        <adlcp:masteryscore>' + (course.passing_score || 80) + '</adlcp:masteryscore>',
+    '      </item>',
+    '    </organization>',
+    '  </organizations>',
+    '  <resources>',
+    '    <resource identifier="RES-1" type="webcontent" adlcp:scormtype="sco" href="player.html">',
+    files,
+    '    </resource>',
+    '  </resources>',
+    '</manifest>',
+    ''
+  ].join("\n");
+}
+
+
+window.__SC_manifest = generate;</script>
+  <!-- runtime file payloads (base64) -->
+  <script>window.__SC_RUNTIME = {"player.css":"LyogU3RvcnljcmFmdCBydW50aW1lIOKAlCBtaW5pbWFsLCBXQ0FHLWZyaWVuZGx5LCBubyBleHRlcm5hbCBkZXBzLiAqLwoKOnJvb3QgewogIC0tYmc6ICMwZjExMTU7CiAgLS1wYW5lbDogIzE4MWEyMTsKICAtLWluazogI2U4ZWFmMDsKICAtLWluay1kaW06ICNhNWFjYmE7CiAgLS1hY2NlbnQ6ICM2ZWE4ZmY7CiAgLS1hY2NlbnQtZGVlcDogIzRiODZkOTsKICAtLW9rOiAjNWJkMjhiOwogIC0tZXJyOiAjZmY3YTdhOwogIC0tbGluZTogIzI2MmEzMzsKICAtLXNoYWRvdzogMCA4cHggMzJweCByZ2JhKDAsMCwwLDAuMzUpOwp9CgpAbWVkaWEgKHByZWZlcnMtY29sb3Itc2NoZW1lOiBsaWdodCkgewogIDpyb290IHsKICAgIC0tYmc6ICNmYWZiZmM7CiAgICAtLXBhbmVsOiAjZmZmZmZmOwogICAgLS1pbms6ICMxNTE3MWI7CiAgICAtLWluay1kaW06ICM1NDVhNjY7CiAgICAtLWFjY2VudDogIzFmNmZlYjsKICAgIC0tYWNjZW50LWRlZXA6ICMwYTRjYjA7CiAgICAtLW9rOiAjMWY4ODNkOwogICAgLS1lcnI6ICNjZjIyMmU7CiAgICAtLWxpbmU6ICNkOGRkZTM7CiAgICAtLXNoYWRvdzogMCA4cHggMjRweCByZ2JhKDAsMCwwLDAuMDgpOwogIH0KfQoKKiB7IGJveC1zaXppbmc6IGJvcmRlci1ib3g7IH0KCmh0bWwsIGJvZHkgewogIG1hcmdpbjogMDsKICBwYWRkaW5nOiAwOwogIGZvbnQtZmFtaWx5OiAtYXBwbGUtc3lzdGVtLCBCbGlua01hY1N5c3RlbUZvbnQsICJTZWdvZSBVSSIsIFJvYm90bywgSW50ZXIsIHNhbnMtc2VyaWY7CiAgYmFja2dyb3VuZDogdmFyKC0tYmcpOwogIGNvbG9yOiB2YXIoLS1pbmspOwogIGZvbnQtc2l6ZTogMTZweDsKICBsaW5lLWhlaWdodDogMS41NTsKfQoKaGVhZGVyIHsKICBwYWRkaW5nOiAxNHB4IDI4cHg7CiAgYmFja2dyb3VuZDogdmFyKC0tcGFuZWwpOwogIGJvcmRlci1ib3R0b206IDFweCBzb2xpZCB2YXIoLS1saW5lKTsKICBkaXNwbGF5OiBmbGV4OwogIGFsaWduLWl0ZW1zOiBjZW50ZXI7CiAganVzdGlmeS1jb250ZW50OiBzcGFjZS1iZXR3ZWVuOwogIHBvc2l0aW9uOiBzdGlja3k7CiAgdG9wOiAwOwogIHotaW5kZXg6IDEwOwp9CgojY291cnNlLXRpdGxlIHsKICBmb250LXNpemU6IDEuMDVyZW07CiAgZm9udC13ZWlnaHQ6IDYwMDsKICBtYXJnaW46IDA7Cn0KCiNwcm9ncmVzcy1iYXIgewogIGhlaWdodDogNnB4OwogIHdpZHRoOiAxMDAlOwogIGJhY2tncm91bmQ6IHZhcigtLWxpbmUpOwogIHBvc2l0aW9uOiBzdGlja3k7CiAgdG9wOiA0OHB4OwogIHotaW5kZXg6IDk7Cn0KCiNwcm9ncmVzcyB7CiAgaGVpZ2h0OiAxMDAlOwogIHdpZHRoOiAwJTsKICBiYWNrZ3JvdW5kOiBsaW5lYXItZ3JhZGllbnQoOTBkZWcsIHZhcigtLWFjY2VudCksIHZhcigtLWFjY2VudC1kZWVwKSk7CiAgdHJhbnNpdGlvbjogd2lkdGggMjIwbXMgZWFzZS1vdXQ7Cn0KCm1haW4gewogIG1heC13aWR0aDogODIwcHg7CiAgbWFyZ2luOiAwIGF1dG87CiAgcGFkZGluZzogMzZweCAyNHB4IDgwcHg7Cn0KCi5zbGlkZSB7CiAgYmFja2dyb3VuZDogdmFyKC0tcGFuZWwpOwogIGJvcmRlcjogMXB4IHNvbGlkIHZhcigtLWxpbmUpOwogIGJvcmRlci1yYWRpdXM6IDE0cHg7CiAgcGFkZGluZzogMzJweCAzMnB4IDI4cHg7CiAgYm94LXNoYWRvdzogdmFyKC0tc2hhZG93KTsKICBhbmltYXRpb246IGZhZGVJbiAyMDBtcyBlYXNlLW91dDsKfQoKQGtleWZyYW1lcyBmYWRlSW4gewogIGZyb20geyBvcGFjaXR5OiAwOyB0cmFuc2Zvcm06IHRyYW5zbGF0ZVkoNnB4KTsgfQogIHRvIHsgb3BhY2l0eTogMTsgdHJhbnNmb3JtOiB0cmFuc2xhdGVZKDApOyB9Cn0KCi5zbGlkZSBoMiB7CiAgbWFyZ2luOiAwIDAgMTZweDsKICBmb250LXNpemU6IDEuNnJlbTsKICBmb250LXdlaWdodDogNzAwOwogIGxpbmUtaGVpZ2h0OiAxLjI1OwogIG91dGxpbmU6IG5vbmU7Cn0KCi5zbGlkZSBoMjpmb2N1cy12aXNpYmxlIHsKICBvdXRsaW5lOiAycHggc29saWQgdmFyKC0tYWNjZW50KTsKICBvdXRsaW5lLW9mZnNldDogNHB4OwogIGJvcmRlci1yYWRpdXM6IDRweDsKfQoKLnNsaWRlLWltYWdlIHsKICBtYXgtd2lkdGg6IDEwMCU7CiAgaGVpZ2h0OiBhdXRvOwogIGJvcmRlci1yYWRpdXM6IDEwcHg7CiAgbWFyZ2luLWJvdHRvbTogMjBweDsKICBkaXNwbGF5OiBibG9jazsKfQoKLm5hcnJhdGlvbiB7CiAgY29sb3I6IHZhcigtLWluay1kaW0pOwogIGZvbnQtc3R5bGU6IGl0YWxpYzsKICBib3JkZXItbGVmdDogM3B4IHNvbGlkIHZhcigtLWFjY2VudCk7CiAgcGFkZGluZzogOHB4IDE0cHg7CiAgbWFyZ2luOiAwIDAgMThweDsKICBmb250LXNpemU6IDAuOTVyZW07Cn0KCi5ib2R5IHsKICBtYXJnaW46IDAgMCAyMnB4Owp9CgouYm9keSBwIHsgbWFyZ2luOiAwIDAgMTJweDsgfQouYm9keSB1bCwgLmJvZHkgb2wgeyBwYWRkaW5nLWxlZnQ6IDIycHg7IG1hcmdpbjogMCAwIDEycHg7IH0KCi5xdWVzdGlvbiwgLnByb21wdCB7CiAgZm9udC1zaXplOiAxLjFyZW07CiAgZm9udC13ZWlnaHQ6IDYwMDsKICBtYXJnaW46IDhweCAwIDE2cHg7Cn0KCi5jaG9pY2VzLCAuYnJhbmNoZXMgewogIGxpc3Qtc3R5bGU6IG5vbmU7CiAgcGFkZGluZzogMDsKICBtYXJnaW46IDAgMCAxOHB4OwogIGRpc3BsYXk6IGZsZXg7CiAgZmxleC1kaXJlY3Rpb246IGNvbHVtbjsKICBnYXA6IDEwcHg7Cn0KCi5jaG9pY2UsIC5idG4uYnJhbmNoIHsKICB3aWR0aDogMTAwJTsKICB0ZXh0LWFsaWduOiBsZWZ0OwogIGJhY2tncm91bmQ6IHRyYW5zcGFyZW50OwogIGJvcmRlcjogMS41cHggc29saWQgdmFyKC0tbGluZSk7CiAgYm9yZGVyLXJhZGl1czogMTBweDsKICBwYWRkaW5nOiAxNHB4IDE4cHg7CiAgZm9udC1zaXplOiAxcmVtOwogIGNvbG9yOiB2YXIoLS1pbmspOwogIGN1cnNvcjogcG9pbnRlcjsKICB0cmFuc2l0aW9uOiBhbGwgMTQwbXMgZWFzZTsKfQoKLmNob2ljZTpob3Zlcjpub3QoOmRpc2FibGVkKSwKLmJ0bi5icmFuY2g6aG92ZXIgewogIGJvcmRlci1jb2xvcjogdmFyKC0tYWNjZW50KTsKICBiYWNrZ3JvdW5kOiByZ2JhKDExMCwgMTY4LCAyNTUsIDAuMDYpOwp9CgouY2hvaWNlOmZvY3VzLXZpc2libGUsCi5idG46Zm9jdXMtdmlzaWJsZSB7CiAgb3V0bGluZTogMnB4IHNvbGlkIHZhcigtLWFjY2VudCk7CiAgb3V0bGluZS1vZmZzZXQ6IDJweDsKfQoKLmNob2ljZS5yaWdodCB7IGJvcmRlci1jb2xvcjogdmFyKC0tb2spOyBiYWNrZ3JvdW5kOiByZ2JhKDkxLDIxMCwxMzksMC4xMCk7IH0KLmNob2ljZS53cm9uZyB7IGJvcmRlci1jb2xvcjogdmFyKC0tZXJyKTsgYmFja2dyb3VuZDogcmdiYSgyNTUsMTIyLDEyMiwwLjEwKTsgfQouY2hvaWNlLmFuc3dlcjpub3QoLnJpZ2h0KSB7IGJvcmRlci1zdHlsZTogZGFzaGVkOyBib3JkZXItY29sb3I6IHZhcigtLW9rKTsgfQoKLmZlZWRiYWNrIHsKICBwYWRkaW5nOiAxMnB4IDE2cHg7CiAgYm9yZGVyLXJhZGl1czogOHB4OwogIG1hcmdpbjogNHB4IDAgMThweDsKICBmb250LXNpemU6IDAuOTVyZW07Cn0KLmZlZWRiYWNrLm9rIHsgYmFja2dyb3VuZDogcmdiYSg5MSwyMTAsMTM5LDAuMTApOyBjb2xvcjogdmFyKC0tb2spOyB9Ci5mZWVkYmFjay5lcnIgeyBiYWNrZ3JvdW5kOiByZ2JhKDI1NSwxMjIsMTIyLDAuMTApOyBjb2xvcjogdmFyKC0tZXJyKTsgfQoKLm5hdiB7CiAgZGlzcGxheTogZmxleDsKICBnYXA6IDEycHg7CiAganVzdGlmeS1jb250ZW50OiBmbGV4LWVuZDsKICBtYXJnaW4tdG9wOiAxMnB4Owp9CgouYnRuIHsKICBmb250OiBpbmhlcml0OwogIGJvcmRlci1yYWRpdXM6IDhweDsKICBwYWRkaW5nOiAxMHB4IDIycHg7CiAgYm9yZGVyOiAxLjVweCBzb2xpZCB0cmFuc3BhcmVudDsKICBjdXJzb3I6IHBvaW50ZXI7CiAgZm9udC13ZWlnaHQ6IDYwMDsKICBmb250LXNpemU6IDAuOTVyZW07CiAgdHJhbnNpdGlvbjogYWxsIDE0MG1zIGVhc2U7Cn0KCi5idG4ucHJpbWFyeSB7CiAgYmFja2dyb3VuZDogdmFyKC0tYWNjZW50KTsKICBjb2xvcjogd2hpdGU7Cn0KLmJ0bi5wcmltYXJ5OmhvdmVyIHsgYmFja2dyb3VuZDogdmFyKC0tYWNjZW50LWRlZXApOyB9CgouYnRuLnNlY29uZGFyeSB7CiAgYmFja2dyb3VuZDogdHJhbnNwYXJlbnQ7CiAgY29sb3I6IHZhcigtLWluayk7CiAgYm9yZGVyLWNvbG9yOiB2YXIoLS1saW5lKTsKfQouYnRuLnNlY29uZGFyeTpob3ZlciB7IGJvcmRlci1jb2xvcjogdmFyKC0tYWNjZW50KTsgfQoKLnNsaWRlLWVuZCB7CiAgdGV4dC1hbGlnbjogY2VudGVyOwp9Ci5zY29yZS1saW5lIHsKICBmb250LXNpemU6IDEuM3JlbTsKICBtYXJnaW46IDI0cHggMDsKfQouc3RhdHVzLm9rIHsgY29sb3I6IHZhcigtLW9rKTsgfQouc3RhdHVzLmVyciB7IGNvbG9yOiB2YXIoLS1lcnIpOyB9Cgpmb290ZXIgewogIHRleHQtYWxpZ246IGNlbnRlcjsKICBjb2xvcjogdmFyKC0taW5rLWRpbSk7CiAgZm9udC1zaXplOiAwLjc4cmVtOwogIHBhZGRpbmc6IDE0cHg7CiAgYm9yZGVyLXRvcDogMXB4IHNvbGlkIHZhcigtLWxpbmUpOwogIGJhY2tncm91bmQ6IHZhcigtLXBhbmVsKTsKfQoKQG1lZGlhIChtYXgtd2lkdGg6IDY0MHB4KSB7CiAgbWFpbiB7IHBhZGRpbmc6IDIwcHggMTRweCA2MHB4OyB9CiAgLnNsaWRlIHsgcGFkZGluZzogMjRweCAyMHB4OyBib3JkZXItcmFkaXVzOiAxMHB4OyB9CiAgLnNsaWRlIGgyIHsgZm9udC1zaXplOiAxLjM1cmVtOyB9Cn0KCi8qIFJlZHVjZWQgbW90aW9uICovCkBtZWRpYSAocHJlZmVycy1yZWR1Y2VkLW1vdGlvbjogcmVkdWNlKSB7CiAgKiwgKjo6YmVmb3JlLCAqOjphZnRlciB7CiAgICBhbmltYXRpb246IG5vbmUgIWltcG9ydGFudDsKICAgIHRyYW5zaXRpb246IG5vbmUgIWltcG9ydGFudDsKICB9Cn0K","scorm12-api.js":"LyoKICogTWluaW1hbCBTQ09STSAxLjIgQVBJIHdyYXBwZXIuCiAqCiAqIEZpbmRzIHRoZSBMTVMgQVBJIG9iamVjdCBieSB3YWxraW5nIHVwIHdpbmRvdy5wYXJlbnQgYW5kIHdpbmRvdy5vcGVuZXIgY2hhaW5zCiAqIChwZXIgdGhlIFNDT1JNIDEuMiBSVEUgc3BlYywgc2VjdC4gMy4zKS4gSWYgbm8gTE1TIGlzIHByZXNlbnQgKGNvdXJzZSBsYXVuY2hlZAogKiBzdGFuZGFsb25lKSwgYWxsIG1ldGhvZHMgYmVjb21lIG5vLW9wcyByZXR1cm5pbmcgc2Vuc2libGUgZGVmYXVsdHMg4oCUIHNvIHRoZQogKiBjb3Vyc2UgYWx3YXlzIHJ1bnMsIGV2ZW4gd2l0aG91dCBhbiBMTVMuCiAqCiAqIFB1YmxpYyBBUEk6CiAqICAgU0NPUk0uaW5pdCgpICAgICAgICAgICAgICAgICDihpIgYm9vbGVhbiAgIGNhbGwgb25jZSBvbiBwYWdlIGxvYWQKICogICBTQ09STS5zZXQoZWxlbWVudCwgdmFsdWUpICAgIOKGkiBib29sZWFuICAgTE1TU2V0VmFsdWUKICogICBTQ09STS5nZXQoZWxlbWVudCkgICAgICAgICAgIOKGkiBzdHJpbmcgICAgTE1TR2V0VmFsdWUKICogICBTQ09STS5jb21taXQoKSAgICAgICAgICAgICAgIOKGkiBib29sZWFuICAgTE1TQ29tbWl0CiAqICAgU0NPUk0uZmluaXNoKCkgICAgICAgICAgICAgICDihpIgYm9vbGVhbiAgIExNU0ZpbmlzaCAoYWxzbyBjb21taXRzKQogKiAgIFNDT1JNLmNvbm5lY3RlZCAgICAgICAgICAgICAg4oaSIGJvb2xlYW4gICB0cnVlIGlmIGEgcmVhbCBMTVMgQVBJIHdhcyBmb3VuZAogKi8KKGZ1bmN0aW9uIChnbG9iYWwpIHsKICAidXNlIHN0cmljdCI7CgogIHZhciBhcGkgPSBudWxsOwogIHZhciBjb25uZWN0ZWQgPSBmYWxzZTsKCiAgZnVuY3Rpb24gZmluZEFQSSh3aW4pIHsKICAgIHZhciBob3BzID0gMDsKICAgIHdoaWxlICh3aW4gJiYgd2luLnBhcmVudCAmJiB3aW4ucGFyZW50ICE9PSB3aW4gJiYgaG9wcyA8IDUwKSB7CiAgICAgIGlmICh3aW4uQVBJKSByZXR1cm4gd2luLkFQSTsKICAgICAgd2luID0gd2luLnBhcmVudDsKICAgICAgaG9wcysrOwogICAgfQogICAgaWYgKHdpbiAmJiB3aW4uQVBJKSByZXR1cm4gd2luLkFQSTsKICAgIHJldHVybiBudWxsOwogIH0KCiAgZnVuY3Rpb24gZ2V0QVBJKCkgewogICAgaWYgKGFwaSkgcmV0dXJuIGFwaTsKICAgIHRyeSB7CiAgICAgIGFwaSA9IGZpbmRBUEkod2luZG93KTsKICAgICAgaWYgKCFhcGkgJiYgd2luZG93Lm9wZW5lcikgYXBpID0gZmluZEFQSSh3aW5kb3cub3BlbmVyKTsKICAgIH0gY2F0Y2ggKGUpIHsgYXBpID0gbnVsbDsgfQogICAgcmV0dXJuIGFwaTsKICB9CgogIHZhciBTQ09STSA9IHsKICAgIGNvbm5lY3RlZDogZmFsc2UsCgogICAgaW5pdDogZnVuY3Rpb24gKCkgewogICAgICB2YXIgYSA9IGdldEFQSSgpOwogICAgICBpZiAoIWEpIHsgY29ubmVjdGVkID0gZmFsc2U7IHRoaXMuY29ubmVjdGVkID0gZmFsc2U7IHJldHVybiBmYWxzZTsgfQogICAgICB2YXIgb2sgPSBhLkxNU0luaXRpYWxpemUoIiIpID09PSAidHJ1ZSI7CiAgICAgIGNvbm5lY3RlZCA9IG9rOwogICAgICB0aGlzLmNvbm5lY3RlZCA9IG9rOwogICAgICBpZiAob2spIHsKICAgICAgICBhLkxNU1NldFZhbHVlKCJjbWkuY29yZS5sZXNzb25fc3RhdHVzIiwgImluY29tcGxldGUiKTsKICAgICAgICBhLkxNU0NvbW1pdCgiIik7CiAgICAgIH0KICAgICAgcmV0dXJuIG9rOwogICAgfSwKCiAgICBzZXQ6IGZ1bmN0aW9uIChrZXksIHZhbHVlKSB7CiAgICAgIHZhciBhID0gZ2V0QVBJKCk7CiAgICAgIGlmICghYSB8fCAhY29ubmVjdGVkKSByZXR1cm4gZmFsc2U7CiAgICAgIHJldHVybiBhLkxNU1NldFZhbHVlKGtleSwgU3RyaW5nKHZhbHVlKSkgPT09ICJ0cnVlIjsKICAgIH0sCgogICAgZ2V0OiBmdW5jdGlvbiAoa2V5KSB7CiAgICAgIHZhciBhID0gZ2V0QVBJKCk7CiAgICAgIGlmICghYSB8fCAhY29ubmVjdGVkKSByZXR1cm4gIiI7CiAgICAgIHJldHVybiBhLkxNU0dldFZhbHVlKGtleSk7CiAgICB9LAoKICAgIGNvbW1pdDogZnVuY3Rpb24gKCkgewogICAgICB2YXIgYSA9IGdldEFQSSgpOwogICAgICBpZiAoIWEgfHwgIWNvbm5lY3RlZCkgcmV0dXJuIGZhbHNlOwogICAgICByZXR1cm4gYS5MTVNDb21taXQoIiIpID09PSAidHJ1ZSI7CiAgICB9LAoKICAgIGZpbmlzaDogZnVuY3Rpb24gKCkgewogICAgICB2YXIgYSA9IGdldEFQSSgpOwogICAgICBpZiAoIWEgfHwgIWNvbm5lY3RlZCkgcmV0dXJuIGZhbHNlOwogICAgICB0aGlzLmNvbW1pdCgpOwogICAgICB2YXIgb2sgPSBhLkxNU0ZpbmlzaCgiIikgPT09ICJ0cnVlIjsKICAgICAgY29ubmVjdGVkID0gZmFsc2U7CiAgICAgIHRoaXMuY29ubmVjdGVkID0gZmFsc2U7CiAgICAgIHJldHVybiBvazsKICAgIH0sCiAgfTsKCiAgZ2xvYmFsLlNDT1JNID0gU0NPUk07Cn0pKHdpbmRvdyk7Cg==","player.js":"LyoKICogU3RvcnljcmFmdCBydW50aW1lIOKAlCByZW5kZXJzIGNvdXJzZS5qc29uIGludG8gYW4gaW50ZXJhY3RpdmUgU0NPUk0tY29tcGxpYW50CiAqIHBsYXllci4gSGFuZGxlczoKICogICAtIGxpbmVhciBhbmQgYnJhbmNoaW5nIG5hdmlnYXRpb24KICogICAtIGtub3dsZWRnZSBjaGVja3Mgd2l0aCBzY29yaW5nCiAqICAgLSBjbWkuY29yZS5zY29yZS5yYXcgLyBsZXNzb25fc3RhdHVzIC8gc2Vzc2lvbl90aW1lIHJlcG9ydGluZwogKiAgIC0geEFQSSBzdGF0ZW1lbnQgZW1pc3Npb24gKG9wdGlvbmFsLCBmaXJlcyBvbmx5IGlmIFhBUElfRU5EUE9JTlQgaXMgc2V0KQogKiAgIC0ga2V5Ym9hcmQgbmF2aWdhdGlvbiAoVGFiL0VudGVyL0Fycm93KSBhbmQgV0NBRyBmb2N1cyBtYW5hZ2VtZW50CiAqLwooZnVuY3Rpb24gKCkgewogICJ1c2Ugc3RyaWN0IjsKCiAgdmFyIGNvdXJzZSA9IHdpbmRvdy5fX0NPVVJTRV9fOwogIHZhciBzdGF0ZSA9IHsKICAgIGN1cnJlbnRJZDogbnVsbCwKICAgIHZpc2l0ZWQ6IG5ldyBTZXQoKSwKICAgIGFuc3dlcnM6IHt9LCAgICAgLy8ge3NsaWRlSWQ6IHtjaG9pY2VJZHgsIGNvcnJlY3R9fQogICAgc2NvcmU6IDAsICAgICAgICAvLyByYXcgcG9pbnRzIGVhcm5lZAogICAgbWF4U2NvcmU6IDAsICAgICAvLyByYXcgcG9pbnRzIGF2YWlsYWJsZQogICAgc3RhcnRlZDogRGF0ZS5ub3coKSwKICB9OwoKICAvLyAtLS0tLS0tLS0tIHhBUEkgZW1pdCAob3B0aW9uYWwpIC0tLS0tLS0tLS0KICBmdW5jdGlvbiB4YXBpU2VuZCh2ZXJiLCBvYmplY3RJZCwgcmVzdWx0KSB7CiAgICBpZiAoIWNvdXJzZS54YXBpIHx8ICFjb3Vyc2UueGFwaS5lbmRwb2ludCkgcmV0dXJuOwogICAgdmFyIHN0bXQgPSB7CiAgICAgIGFjdG9yOiB7IG5hbWU6IFNDT1JNLmdldCgiY21pLmNvcmUuc3R1ZGVudF9uYW1lIikgfHwgImFub255bW91cyIsCiAgICAgICAgICAgICAgIG1ib3g6ICJtYWlsdG86IiArIChTQ09STS5nZXQoImNtaS5jb3JlLnN0dWRlbnRfaWQiKSB8fCAiYW5vbkBleGFtcGxlLmNvbSIpIH0sCiAgICAgIHZlcmI6IHsgaWQ6ICJodHRwOi8vYWRsbmV0Lmdvdi9leHBhcGkvdmVyYnMvIiArIHZlcmIsCiAgICAgICAgICAgICAgZGlzcGxheTogeyAiZW4tVVMiOiB2ZXJiIH0gfSwKICAgICAgb2JqZWN0OiB7CiAgICAgICAgaWQ6IGNvdXJzZS5pZCArICIjIiArIG9iamVjdElkLAogICAgICAgIGRlZmluaXRpb246IHsgbmFtZTogeyAiZW4tVVMiOiBvYmplY3RJZCB9IH0sCiAgICAgIH0sCiAgICB9OwogICAgaWYgKHJlc3VsdCkgc3RtdC5yZXN1bHQgPSByZXN1bHQ7CiAgICB0cnkgewogICAgICBmZXRjaChjb3Vyc2UueGFwaS5lbmRwb2ludCArICIvc3RhdGVtZW50cyIsIHsKICAgICAgICBtZXRob2Q6ICJQT1NUIiwKICAgICAgICBoZWFkZXJzOiB7CiAgICAgICAgICAiQ29udGVudC1UeXBlIjogImFwcGxpY2F0aW9uL2pzb24iLAogICAgICAgICAgIlgtRXhwZXJpZW5jZS1BUEktVmVyc2lvbiI6ICIxLjAuMyIsCiAgICAgICAgICAiQXV0aG9yaXphdGlvbiI6IGNvdXJzZS54YXBpLmF1dGggfHwgIiIsCiAgICAgICAgfSwKICAgICAgICBib2R5OiBKU09OLnN0cmluZ2lmeShzdG10KSwKICAgICAgfSkuY2F0Y2goZnVuY3Rpb24gKCkge30pOyAvLyBzaWxlbnQg4oCUIHhBUEkgaXMgZmlyZS1hbmQtZm9yZ2V0CiAgICB9IGNhdGNoIChlKSB7fQogIH0KCiAgLy8gLS0tLS0tLS0tLSBwcmVjb21wdXRlIHNjb3JpbmcgLS0tLS0tLS0tLQogIGNvdXJzZS5zbGlkZXMuZm9yRWFjaChmdW5jdGlvbiAocykgewogICAgaWYgKHMudHlwZSA9PT0gImNoZWNrIikgc3RhdGUubWF4U2NvcmUgKz0gKHMucG9pbnRzIHx8IDEpOwogIH0pOwoKICAvLyAtLS0tLS0tLS0tIHJlbmRlcmluZyAtLS0tLS0tLS0tCiAgdmFyICRzdGFnZSA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCJzdGFnZSIpOwogIHZhciAkcHJvZ3Jlc3MgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgicHJvZ3Jlc3MiKTsKICB2YXIgJHRpdGxlID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoImNvdXJzZS10aXRsZSIpOwogICR0aXRsZS50ZXh0Q29udGVudCA9IGNvdXJzZS50aXRsZTsKICBkb2N1bWVudC50aXRsZSA9IGNvdXJzZS50aXRsZTsKCiAgZnVuY3Rpb24gcmVuZGVyU2xpZGUoc2xpZGUpIHsKICAgIHN0YXRlLmN1cnJlbnRJZCA9IHNsaWRlLmlkOwogICAgc3RhdGUudmlzaXRlZC5hZGQoc2xpZGUuaWQpOwogICAgJHN0YWdlLmlubmVySFRNTCA9ICIiOwogICAgJHN0YWdlLnNldEF0dHJpYnV0ZSgiYXJpYS1idXN5IiwgInRydWUiKTsKCiAgICB2YXIgbm9kZSA9IGRvY3VtZW50LmNyZWF0ZUVsZW1lbnQoImFydGljbGUiKTsKICAgIG5vZGUuY2xhc3NOYW1lID0gInNsaWRlIHNsaWRlLSIgKyBzbGlkZS50eXBlOwogICAgbm9kZS5zZXRBdHRyaWJ1dGUoInJvbGUiLCAicmVnaW9uIik7CiAgICBub2RlLnNldEF0dHJpYnV0ZSgiYXJpYS1sYWJlbGxlZGJ5IiwgInNsaWRlLWhlYWRpbmciKTsKCiAgICB2YXIgaCA9IGRvY3VtZW50LmNyZWF0ZUVsZW1lbnQoImgyIik7CiAgICBoLmlkID0gInNsaWRlLWhlYWRpbmciOwogICAgaC50ZXh0Q29udGVudCA9IHNsaWRlLnRpdGxlIHx8ICIiOwogICAgbm9kZS5hcHBlbmRDaGlsZChoKTsKCiAgICBpZiAoc2xpZGUuaW1hZ2UpIHsKICAgICAgdmFyIGltZyA9IGRvY3VtZW50LmNyZWF0ZUVsZW1lbnQoImltZyIpOwogICAgICBpbWcuc3JjID0gImFzc2V0cy8iICsgc2xpZGUuaW1hZ2Uuc3JjOwogICAgICBpbWcuYWx0ID0gc2xpZGUuaW1hZ2UuYWx0IHx8ICIiOwogICAgICBpbWcuY2xhc3NOYW1lID0gInNsaWRlLWltYWdlIjsKICAgICAgbm9kZS5hcHBlbmRDaGlsZChpbWcpOwogICAgfQoKICAgIGlmIChzbGlkZS5uYXJyYXRpb24pIHsKICAgICAgdmFyIG4gPSBkb2N1bWVudC5jcmVhdGVFbGVtZW50KCJwIik7CiAgICAgIG4uY2xhc3NOYW1lID0gIm5hcnJhdGlvbiI7CiAgICAgIG4uc2V0QXR0cmlidXRlKCJhcmlhLWxhYmVsIiwgIk5hcnJhdGlvbiIpOwogICAgICBuLnRleHRDb250ZW50ID0gc2xpZGUubmFycmF0aW9uOwogICAgICBub2RlLmFwcGVuZENoaWxkKG4pOwogICAgfQoKICAgIGlmIChzbGlkZS5ib2R5KSB7CiAgICAgIHZhciBib2R5RWwgPSBkb2N1bWVudC5jcmVhdGVFbGVtZW50KCJkaXYiKTsKICAgICAgYm9keUVsLmNsYXNzTmFtZSA9ICJib2R5IjsKICAgICAgYm9keUVsLmlubmVySFRNTCA9IHNsaWRlLmJvZHk7IC8vIHNhbml0aXplZCBhdCBidWlsZCB0aW1lCiAgICAgIG5vZGUuYXBwZW5kQ2hpbGQoYm9keUVsKTsKICAgIH0KCiAgICBpZiAoc2xpZGUudHlwZSA9PT0gImNoZWNrIikgcmVuZGVyQ2hlY2soc2xpZGUsIG5vZGUpOwogICAgZWxzZSBpZiAoc2xpZGUudHlwZSA9PT0gImJyYW5jaCIpIHJlbmRlckJyYW5jaChzbGlkZSwgbm9kZSk7CiAgICBlbHNlIHJlbmRlckxpbmVhck5hdihzbGlkZSwgbm9kZSk7CgogICAgJHN0YWdlLmFwcGVuZENoaWxkKG5vZGUpOwogICAgJHN0YWdlLnNldEF0dHJpYnV0ZSgiYXJpYS1idXN5IiwgImZhbHNlIik7CiAgICBoLmZvY3VzKCk7CgogICAgdXBkYXRlUHJvZ3Jlc3MoKTsKICAgIFNDT1JNLnNldCgiY21pLmNvcmUubGVzc29uX2xvY2F0aW9uIiwgc2xpZGUuaWQpOwogICAgU0NPUk0uY29tbWl0KCk7CiAgICB4YXBpU2VuZCgiZXhwZXJpZW5jZWQiLCBzbGlkZS5pZCk7CiAgfQoKICBmdW5jdGlvbiByZW5kZXJMaW5lYXJOYXYoc2xpZGUsIG5vZGUpIHsKICAgIHZhciBuYXYgPSBkb2N1bWVudC5jcmVhdGVFbGVtZW50KCJkaXYiKTsKICAgIG5hdi5jbGFzc05hbWUgPSAibmF2IjsKICAgIGlmIChzbGlkZS5wcmV2KSB7CiAgICAgIG5hdi5hcHBlbmRDaGlsZChidXR0b24oIlByZXZpb3VzIiwgZnVuY3Rpb24gKCkgeyBnbyhzbGlkZS5wcmV2KTsgfSwgInNlY29uZGFyeSIpKTsKICAgIH0KICAgIGlmIChzbGlkZS5uZXh0KSB7CiAgICAgIG5hdi5hcHBlbmRDaGlsZChidXR0b24oIk5leHQiLCBmdW5jdGlvbiAoKSB7IGdvKHNsaWRlLm5leHQpOyB9LCAicHJpbWFyeSIpKTsKICAgIH0gZWxzZSB7CiAgICAgIG5hdi5hcHBlbmRDaGlsZChidXR0b24oIkZpbmlzaCBjb3Vyc2UiLCBmaW5pc2hDb3Vyc2UsICJwcmltYXJ5IikpOwogICAgfQogICAgbm9kZS5hcHBlbmRDaGlsZChuYXYpOwogIH0KCiAgZnVuY3Rpb24gcmVuZGVyQ2hlY2soc2xpZGUsIG5vZGUpIHsKICAgIHZhciBxID0gZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgicCIpOwogICAgcS5jbGFzc05hbWUgPSAicXVlc3Rpb24iOwogICAgcS50ZXh0Q29udGVudCA9IHNsaWRlLnF1ZXN0aW9uOwogICAgbm9kZS5hcHBlbmRDaGlsZChxKTsKCiAgICB2YXIgbGlzdCA9IGRvY3VtZW50LmNyZWF0ZUVsZW1lbnQoInVsIik7CiAgICBsaXN0LmNsYXNzTmFtZSA9ICJjaG9pY2VzIjsKICAgIGxpc3Quc2V0QXR0cmlidXRlKCJyb2xlIiwgInJhZGlvZ3JvdXAiKTsKICAgIGxpc3Quc2V0QXR0cmlidXRlKCJhcmlhLWxhYmVsbGVkYnkiLCAic2xpZGUtaGVhZGluZyIpOwoKICAgIHNsaWRlLmNob2ljZXMuZm9yRWFjaChmdW5jdGlvbiAoYywgaWR4KSB7CiAgICAgIHZhciBsaSA9IGRvY3VtZW50LmNyZWF0ZUVsZW1lbnQoImxpIik7CiAgICAgIHZhciBiID0gZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgiYnV0dG9uIik7CiAgICAgIGIuY2xhc3NOYW1lID0gImNob2ljZSI7CiAgICAgIGIuc2V0QXR0cmlidXRlKCJyb2xlIiwgInJhZGlvIik7CiAgICAgIGIuc2V0QXR0cmlidXRlKCJhcmlhLWNoZWNrZWQiLCAiZmFsc2UiKTsKICAgICAgYi50ZXh0Q29udGVudCA9IFN0cmluZy5mcm9tQ2hhckNvZGUoNjUgKyBpZHgpICsgIi4gIiArIGMudGV4dDsKICAgICAgYi5hZGRFdmVudExpc3RlbmVyKCJjbGljayIsIGZ1bmN0aW9uICgpIHsgYW5zd2VyQ2hlY2soc2xpZGUsIGlkeCwgbm9kZSk7IH0pOwogICAgICBsaS5hcHBlbmRDaGlsZChiKTsKICAgICAgbGlzdC5hcHBlbmRDaGlsZChsaSk7CiAgICB9KTsKICAgIG5vZGUuYXBwZW5kQ2hpbGQobGlzdCk7CiAgfQoKICBmdW5jdGlvbiBhbnN3ZXJDaGVjayhzbGlkZSwgY2hvaWNlSWR4LCBub2RlKSB7CiAgICBpZiAoc3RhdGUuYW5zd2Vyc1tzbGlkZS5pZF0pIHJldHVybjsgLy8gYWxyZWFkeSBhbnN3ZXJlZAogICAgdmFyIGNob2ljZSA9IHNsaWRlLmNob2ljZXNbY2hvaWNlSWR4XTsKICAgIHZhciBjb3JyZWN0ID0gISFjaG9pY2UuY29ycmVjdDsKICAgIHN0YXRlLmFuc3dlcnNbc2xpZGUuaWRdID0geyBjaG9pY2VJZHg6IGNob2ljZUlkeCwgY29ycmVjdDogY29ycmVjdCB9OwogICAgaWYgKGNvcnJlY3QpIHN0YXRlLnNjb3JlICs9IChzbGlkZS5wb2ludHMgfHwgMSk7CgogICAgQXJyYXkucHJvdG90eXBlLmZvckVhY2guY2FsbChub2RlLnF1ZXJ5U2VsZWN0b3JBbGwoIi5jaG9pY2UiKSwgZnVuY3Rpb24gKGIsIGkpIHsKICAgICAgYi5kaXNhYmxlZCA9IHRydWU7CiAgICAgIGlmIChpID09PSBjaG9pY2VJZHgpIGIuY2xhc3NMaXN0LmFkZChjb3JyZWN0ID8gInJpZ2h0IiA6ICJ3cm9uZyIpOwogICAgICBpZiAoc2xpZGUuY2hvaWNlc1tpXS5jb3JyZWN0KSBiLmNsYXNzTGlzdC5hZGQoImFuc3dlciIpOwogICAgfSk7CgogICAgdmFyIGZiID0gZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgicCIpOwogICAgZmIuY2xhc3NOYW1lID0gImZlZWRiYWNrICIgKyAoY29ycmVjdCA/ICJvayIgOiAiZXJyIik7CiAgICBmYi5zZXRBdHRyaWJ1dGUoInJvbGUiLCAic3RhdHVzIik7CiAgICBmYi50ZXh0Q29udGVudCA9IGNvcnJlY3QgPyAoc2xpZGUuZmVlZGJhY2tfY29ycmVjdCB8fCAiQ29ycmVjdC4iKQogICAgICAgICAgICAgICAgICAgICAgICAgICAgIDogKHNsaWRlLmZlZWRiYWNrX2luY29ycmVjdCB8fCAiTm90IHF1aXRlLiAiICsgKGNob2ljZS5mZWVkYmFjayB8fCAiIikpOwogICAgbm9kZS5hcHBlbmRDaGlsZChmYik7CgogICAgLy8gU0NPUk0gMS4yIGluZGV4ZXMgaW50ZXJhY3Rpb25zIHN0YXJ0aW5nIGZyb20gMAogICAgdmFyIGlkeCA9IE9iamVjdC5rZXlzKHN0YXRlLmFuc3dlcnMpLmxlbmd0aCAtIDE7CiAgICBTQ09STS5zZXQoImNtaS5pbnRlcmFjdGlvbnMuIiArIGlkeCArICIuaWQiLCBzbGlkZS5pZCk7CiAgICBTQ09STS5zZXQoImNtaS5pbnRlcmFjdGlvbnMuIiArIGlkeCArICIuc3R1ZGVudF9yZXNwb25zZSIsIFN0cmluZyhjaG9pY2VJZHgpKTsKICAgIFNDT1JNLnNldCgiY21pLmludGVyYWN0aW9ucy4iICsgaWR4ICsgIi5yZXN1bHQiLCBjb3JyZWN0ID8gImNvcnJlY3QiIDogIndyb25nIik7CiAgICBTQ09STS5jb21taXQoKTsKICAgIHhhcGlTZW5kKCJhbnN3ZXJlZCIsIHNsaWRlLmlkLCB7IHN1Y2Nlc3M6IGNvcnJlY3QsIHJlc3BvbnNlOiBTdHJpbmcuZnJvbUNoYXJDb2RlKDY1ICsgY2hvaWNlSWR4KSB9KTsKCiAgICB2YXIgbmF2ID0gZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgiZGl2Iik7CiAgICBuYXYuY2xhc3NOYW1lID0gIm5hdiI7CiAgICBpZiAoc2xpZGUubmV4dCkgbmF2LmFwcGVuZENoaWxkKGJ1dHRvbigiTmV4dCIsIGZ1bmN0aW9uICgpIHsgZ28oc2xpZGUubmV4dCk7IH0sICJwcmltYXJ5IikpOwogICAgZWxzZSBuYXYuYXBwZW5kQ2hpbGQoYnV0dG9uKCJGaW5pc2ggY291cnNlIiwgZmluaXNoQ291cnNlLCAicHJpbWFyeSIpKTsKICAgIG5vZGUuYXBwZW5kQ2hpbGQobmF2KTsKICB9CgogIGZ1bmN0aW9uIHJlbmRlckJyYW5jaChzbGlkZSwgbm9kZSkgewogICAgdmFyIHAgPSBkb2N1bWVudC5jcmVhdGVFbGVtZW50KCJwIik7CiAgICBwLmNsYXNzTmFtZSA9ICJwcm9tcHQiOwogICAgcC50ZXh0Q29udGVudCA9IHNsaWRlLnByb21wdDsKICAgIG5vZGUuYXBwZW5kQ2hpbGQocCk7CgogICAgdmFyIGxpc3QgPSBkb2N1bWVudC5jcmVhdGVFbGVtZW50KCJ1bCIpOwogICAgbGlzdC5jbGFzc05hbWUgPSAiYnJhbmNoZXMiOwogICAgc2xpZGUub3B0aW9ucy5mb3JFYWNoKGZ1bmN0aW9uIChvcHQpIHsKICAgICAgdmFyIGxpID0gZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgibGkiKTsKICAgICAgbGkuYXBwZW5kQ2hpbGQoYnV0dG9uKG9wdC5sYWJlbCwgZnVuY3Rpb24gKCkgeyBnbyhvcHQuZ290byk7IH0sICJicmFuY2giKSk7CiAgICAgIGxpc3QuYXBwZW5kQ2hpbGQobGkpOwogICAgfSk7CiAgICBub2RlLmFwcGVuZENoaWxkKGxpc3QpOwogIH0KCiAgZnVuY3Rpb24gYnV0dG9uKGxhYmVsLCBvbkNsaWNrLCBjbHMpIHsKICAgIHZhciBiID0gZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgiYnV0dG9uIik7CiAgICBiLmNsYXNzTmFtZSA9ICJidG4gIiArIChjbHMgfHwgIiIpOwogICAgYi50ZXh0Q29udGVudCA9IGxhYmVsOwogICAgYi5hZGRFdmVudExpc3RlbmVyKCJjbGljayIsIG9uQ2xpY2spOwogICAgcmV0dXJuIGI7CiAgfQoKICBmdW5jdGlvbiBnbyhzbGlkZUlkKSB7CiAgICB2YXIgcyA9IGNvdXJzZS5zbGlkZXMuZmluZChmdW5jdGlvbiAoeCkgeyByZXR1cm4geC5pZCA9PT0gc2xpZGVJZDsgfSk7CiAgICBpZiAoIXMpIHsgY29uc29sZS53YXJuKCJVbmtub3duIHNsaWRlOiIsIHNsaWRlSWQpOyByZXR1cm47IH0KICAgIHJlbmRlclNsaWRlKHMpOwogIH0KCiAgZnVuY3Rpb24gdXBkYXRlUHJvZ3Jlc3MoKSB7CiAgICB2YXIgcGN0ID0gTWF0aC5yb3VuZCgoc3RhdGUudmlzaXRlZC5zaXplIC8gY291cnNlLnNsaWRlcy5sZW5ndGgpICogMTAwKTsKICAgICRwcm9ncmVzcy5zdHlsZS53aWR0aCA9IHBjdCArICIlIjsKICAgICRwcm9ncmVzcy5zZXRBdHRyaWJ1dGUoImFyaWEtdmFsdWVub3ciLCBTdHJpbmcocGN0KSk7CiAgfQoKICBmdW5jdGlvbiBmaW5pc2hDb3Vyc2UoKSB7CiAgICB2YXIgcGN0U2NvcmUgPSBzdGF0ZS5tYXhTY29yZSA+IDAgPyBNYXRoLnJvdW5kKChzdGF0ZS5zY29yZSAvIHN0YXRlLm1heFNjb3JlKSAqIDEwMCkgOiAxMDA7CiAgICB2YXIgcGFzc2VkID0gcGN0U2NvcmUgPj0gKGNvdXJzZS5wYXNzaW5nX3Njb3JlIHx8IDgwKTsKCiAgICBTQ09STS5zZXQoImNtaS5jb3JlLnNjb3JlLnJhdyIsIFN0cmluZyhwY3RTY29yZSkpOwogICAgU0NPUk0uc2V0KCJjbWkuY29yZS5zY29yZS5taW4iLCAiMCIpOwogICAgU0NPUk0uc2V0KCJjbWkuY29yZS5zY29yZS5tYXgiLCAiMTAwIik7CiAgICBTQ09STS5zZXQoImNtaS5jb3JlLmxlc3Nvbl9zdGF0dXMiLCBwYXNzZWQgPyAicGFzc2VkIiA6ICJmYWlsZWQiKTsKCiAgICB2YXIgZHQgPSBNYXRoLmZsb29yKChEYXRlLm5vdygpIC0gc3RhdGUuc3RhcnRlZCkgLyAxMDAwKTsKICAgIHZhciBoaCA9IFN0cmluZyhNYXRoLmZsb29yKGR0IC8gMzYwMCkpLnBhZFN0YXJ0KDIsICIwIik7CiAgICB2YXIgbW0gPSBTdHJpbmcoTWF0aC5mbG9vcigoZHQgJSAzNjAwKSAvIDYwKSkucGFkU3RhcnQoMiwgIjAiKTsKICAgIHZhciBzcyA9IFN0cmluZyhkdCAlIDYwKS5wYWRTdGFydCgyLCAiMCIpOwogICAgU0NPUk0uc2V0KCJjbWkuY29yZS5zZXNzaW9uX3RpbWUiLCBoaCArICI6IiArIG1tICsgIjoiICsgc3MpOwoKICAgIFNDT1JNLmNvbW1pdCgpOwogICAgeGFwaVNlbmQocGFzc2VkID8gInBhc3NlZCIgOiAiZmFpbGVkIiwgImNvdXJzZSIsIHsgc2NvcmU6IHsgcmF3OiBwY3RTY29yZSwgbWluOiAwLCBtYXg6IDEwMCB9LCBzdWNjZXNzOiBwYXNzZWQgfSk7CgogICAgJHN0YWdlLmlubmVySFRNTCA9CiAgICAgICc8YXJ0aWNsZSBjbGFzcz0ic2xpZGUgc2xpZGUtZW5kIj4nICsKICAgICAgJyAgPGgyPkNvdXJzZSBjb21wbGV0ZTwvaDI+JyArCiAgICAgICcgIDxwIGNsYXNzPSJzY29yZS1saW5lIj5TY29yZTogPHN0cm9uZz4nICsgcGN0U2NvcmUgKyAnJTwvc3Ryb25nPiAnICsKICAgICAgJyAgICA8c3BhbiBjbGFzcz0ic3RhdHVzICcgKyAocGFzc2VkID8gIm9rIiA6ICJlcnIiKSArICciPignICsgKHBhc3NlZCA/ICJQYXNzZWQiIDogIkZhaWxlZCIpICsgJyk8L3NwYW4+PC9wPicgKwogICAgICAnICA8cD5Zb3UgbWF5IG5vdyBjbG9zZSB0aGlzIHdpbmRvdy48L3A+JyArCiAgICAgICc8L2FydGljbGU+JzsKCiAgICBzZXRUaW1lb3V0KGZ1bmN0aW9uICgpIHsgU0NPUk0uZmluaXNoKCk7IH0sIDI1MCk7CiAgfQoKICAvLyAtLS0tLS0tLS0tIHN0YXJ0dXAgLS0tLS0tLS0tLQogIFNDT1JNLmluaXQoKTsKICB2YXIgc2F2ZWRMb2MgPSBTQ09STS5nZXQoImNtaS5jb3JlLmxlc3Nvbl9sb2NhdGlvbiIpOwogIHZhciBzdGFydElkID0gKHNhdmVkTG9jICYmIGNvdXJzZS5zbGlkZXMuc29tZShmdW5jdGlvbiAocykgeyByZXR1cm4gcy5pZCA9PT0gc2F2ZWRMb2M7IH0pKQogICAgICAgICAgICAgID8gc2F2ZWRMb2MgOiBjb3Vyc2Uuc2xpZGVzWzBdLmlkOwogIGdvKHN0YXJ0SWQpOwoKICAvLyBTYXZlIG9uIHVubG9hZCDigJQgYnV0IGRvbid0IG92ZXJ3cml0ZSBhIHRlcm1pbmFsIHN0YXR1cyAocGFzc2VkL2ZhaWxlZC9jb21wbGV0ZWQpCiAgLy8gdGhhdCBmaW5pc2hDb3Vyc2UoKSBqdXN0IHNldC4KICB2YXIgdGVybWluYWwgPSB7IHBhc3NlZDogMSwgZmFpbGVkOiAxLCBjb21wbGV0ZWQ6IDEgfTsKICB3aW5kb3cuYWRkRXZlbnRMaXN0ZW5lcigiYmVmb3JldW5sb2FkIiwgZnVuY3Rpb24gKCkgewogICAgdmFyIGN1cnJlbnQgPSBTQ09STS5nZXQoImNtaS5jb3JlLmxlc3Nvbl9zdGF0dXMiKTsKICAgIGlmICghdGVybWluYWxbY3VycmVudF0pIHsKICAgICAgU0NPUk0uc2V0KCJjbWkuY29yZS5sZXNzb25fc3RhdHVzIiwgImluY29tcGxldGUiKTsKICAgIH0KICAgIFNDT1JNLmNvbW1pdCgpOwogICAgU0NPUk0uZmluaXNoKCk7CiAgfSk7CgogIC8vIEtleWJvYXJkOiBSaWdodCBhcnJvdyDihpIgbmV4dCBidXR0b24sIExlZnQgYXJyb3cg4oaSIHByZXZpb3VzIGlmIHByZXNlbnQKICBkb2N1bWVudC5hZGRFdmVudExpc3RlbmVyKCJrZXlkb3duIiwgZnVuY3Rpb24gKGUpIHsKICAgIGlmIChlLnRhcmdldC50YWdOYW1lID09PSAiQlVUVE9OIikgcmV0dXJuOwogICAgaWYgKGUua2V5ID09PSAiQXJyb3dSaWdodCIpIHsKICAgICAgdmFyIG54ID0gZG9jdW1lbnQucXVlcnlTZWxlY3RvcigiLmJ0bi5wcmltYXJ5Iik7CiAgICAgIGlmIChueCkgbnguY2xpY2soKTsKICAgIH0gZWxzZSBpZiAoZS5rZXkgPT09ICJBcnJvd0xlZnQiKSB7CiAgICAgIHZhciBwdiA9IGRvY3VtZW50LnF1ZXJ5U2VsZWN0b3IoIi5idG4uc2Vjb25kYXJ5Iik7CiAgICAgIGlmIChwdikgcHYuY2xpY2soKTsKICAgIH0KICB9KTsKfSkoKTsK","player.html":"PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9Int7TEFOR319Ij4KPGhlYWQ+CiAgPG1ldGEgY2hhcnNldD0idXRmLTgiPgogIDxtZXRhIG5hbWU9InZpZXdwb3J0IiBjb250ZW50PSJ3aWR0aD1kZXZpY2Utd2lkdGgsIGluaXRpYWwtc2NhbGU9MSI+CiAgPHRpdGxlPnt7VElUTEV9fTwvdGl0bGU+CiAgPGxpbmsgcmVsPSJzdHlsZXNoZWV0IiBocmVmPSJwbGF5ZXIuY3NzIj4KICA8c2NyaXB0PndpbmRvdy5fX0NPVVJTRV9fID0ge3tDT1VSU0VfSlNPTn19Ozwvc2NyaXB0Pgo8L2hlYWQ+Cjxib2R5PgogIDxoZWFkZXI+CiAgICA8aDEgaWQ9ImNvdXJzZS10aXRsZSI+e3tUSVRMRX19PC9oMT4KICAgIDxzcGFuIGNsYXNzPSJicmFuZGluZyIgYXJpYS1oaWRkZW49InRydWUiPlN0b3J5Y3JhZnQ8L3NwYW4+CiAgPC9oZWFkZXI+CiAgPGRpdiBpZD0icHJvZ3Jlc3MtYmFyIiByb2xlPSJwcm9ncmVzc2JhciIgYXJpYS12YWx1ZW1pbj0iMCIgYXJpYS12YWx1ZW1heD0iMTAwIiBhcmlhLXZhbHVlbm93PSIwIj4KICAgIDxkaXYgaWQ9InByb2dyZXNzIj48L2Rpdj4KICA8L2Rpdj4KICA8bWFpbiBpZD0ic3RhZ2UiIHRhYmluZGV4PSItMSI+PC9tYWluPgogIDxmb290ZXI+UG93ZXJlZCBieSBTdG9yeWNyYWZ0IMK3IFNDT1JNIDEuMiBjb21wbGlhbnQ8L2Zvb3Rlcj4KCiAgPHNjcmlwdCBzcmM9InNjb3JtMTItYXBpLmpzIj48L3NjcmlwdD4KICA8c2NyaXB0IHNyYz0icGxheWVyLmpzIj48L3NjcmlwdD4KPC9ib2R5Pgo8L2h0bWw+Cg=="};</script>
+  <!-- JSZip (vendored from CDN; falls back gracefully if blocked) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+  <script>
+    // ---------- examples ----------
+    var EXAMPLES = {
+      posh: '---\\ntitle: Workplace Respect — POSH Awareness\\npassing_score: 70\\nlanguage: en\\n---\\n\\n## Slide: Welcome\\n[Narration] Welcome to this 15-minute course on workplace respect.\\n\\nBy the end you will be able to:\\n\\n- Recognise behaviour covered under the POSH Act, 2013\\n- Initiate a complaint through the correct channel\\n\\n## Check: Recognising harassment\\n[Q] A colleague repeatedly sends jokes with sexual innuendo to a co-worker over Slack, despite being asked to stop. Is this harassment under POSH?\\n[A*] Yes — repeated, unwelcome verbal/written conduct of a sexual nature qualifies.\\n[A] No — Slack messages aren\\'t covered.\\n[Feedback correct] Correct. POSH covers any medium of workplace communication.\\n[Feedback incorrect] Reconsider. POSH applies wherever work happens, including digital channels.\\n\\n## Branch: The hallway moment\\n[Prompt] You overhear a senior colleague making a suggestive comment to a new hire. The new hire looks uncomfortable but does not respond. What do you do?\\n[Option: Speak up in the moment → moment-speak]\\n[Option: Check in privately afterwards → moment-check]\\n\\n## Slide: You speak up\\n[Id] moment-speak\\nDirect intervention can be powerful — when safe.\\n\\n## Slide: You check in privately\\n[Id] moment-check\\nQuiet support is often what the recipient needs most.\\n\\n## Slide: Course complete\\n[Narration] You\\'ve completed the module.',
+      manager: '---\\ntitle: What You Didn\\'t Say — Communication for First-Time Managers\\npassing_score: 75\\n---\\n\\n## Slide: Before we start\\n[Narration] This module is about the things you don\\'t say. The pause. The "sounds good." The Slack message you typed and didn\\'t send.\\n\\n## Slide: A scenario\\nPriya, four months on your team, sent you her project plan Tuesday. You said "thanks Priya" and moved on. Today she has DMed: "was the plan okay?" You have 90 seconds.\\n\\n## Branch: How do you reply?\\n[Prompt] What do you do?\\n[Option: Quick "yes all good" → reply-quick]\\n[Option: Take 5 min, write specifics → reply-specific]\\n\\n## Slide: The quick reply\\n[Id] reply-quick\\nPolite. Empty calories. Praise has a half-life.\\n\\n## Slide: The specific response\\n[Id] reply-specific\\nThree minutes well spent. The next meeting will survive.\\n\\n## Check: What was Priya actually asking for?\\n[Q] When a four-month report asks "was it okay?", what are they usually asking for?\\n[A] Approval\\n[A*] Specific calibration\\n[A] Reassurance\\n[Feedback correct] Right. They want to know what to do again and what to do differently.\\n\\n## Slide: Course complete\\nThanks for working through this.',
+      oncall: '---\\ntitle: The First Page — Incident Response\\npassing_score: 75\\n---\\n\\n## Slide: This is not the runbook\\n[Narration] The runbook lives in your wiki. This module is about the seven minutes before you open it.\\n\\nThe goal of the first minute is not to fix anything. The goal is orientation — service, signal, scope.\\n\\n## Slide: Page one\\n2:47 a.m. payments-api error rate 100% in eu-west-1. What do you do first?\\n\\n## Branch: First move\\n[Prompt] First action?\\n[Option: Open the runbook → page1-runbook]\\n[Option: Check the deploy log → page1-deploy]\\n[Option: Page a second responder → page1-second]\\n\\n## Slide: Runbook first\\n[Id] page1-runbook\\nDefensible. Usually right. At 100% error rate, "did we just deploy" is the cheaper hypothesis.\\n\\n## Slide: Deploy log first\\n[Id] page1-deploy\\nRight move at 2:47 a.m. The cheapest possible explanation for "everything is broken" is "someone just deployed."\\n\\n## Slide: Page second responder\\n[Id] page1-second\\nOften premature. You can still describe the incident in two sentences. Page the second responder when you can\\'t.\\n\\n## Check: Through-line\\n[Q] What is the most important first action?\\n[A] Acknowledge and notify\\n[A*] Read the alert and form a one-sentence read of what is happening\\n[A] Open the runbook\\n[Feedback correct] Right. Orientation first.\\n\\n## Slide: Course complete\\nIncidents are supposed to be non-events.',
+      math: '---\\ntitle: Why Negative × Negative = Positive\\npassing_score: 80\\n---\\n\\n## Slide: The question\\n[Narration] You\\'ve been told that negative × negative = positive is "just a rule." It is not.\\n\\n## Slide: We start with\\n- 3 × 4 = 12\\n- 3 × 0 = 0\\n- The distributive property: 3 × (4 + 2) = 3×4 + 3×2\\n\\n## Slide: Positive × negative\\nFrom 4 + (-4) = 0, multiply both sides by 3:\\n\\n3 × (4 + (-4)) = 0\\n\\nDistribute: 12 + 3 × (-4) = 0. So 3 × (-4) must be -12.\\n\\n## Check: Apply it\\n[Q] Using the same trick, what must 2 × (-5) equal?\\n[A] 10\\n[A*] -10\\n[A] 0\\n[Feedback correct] Exactly. 10 + 2×(-5) = 0, so 2×(-5) = -10.\\n\\n## Slide: Negative × negative\\nNow start with 3 + (-3) = 0, multiply by (-4): -12 + (-4)×(-3) = 0. So (-4)×(-3) = +12.\\n\\n## Check: Best explanation\\n[Q] Best way to explain why (-2)×(-3) = +6?\\n[A] Two negatives make a positive — it\\'s a rule\\n[A*] Distributive + zero-product — derived, not declared\\n[A] Negatives cancel\\n[Feedback correct] Right. Every rule in mathematics has a reason; go find it.\\n\\n## Slide: Course complete\\nExplain it to someone tonight. That\\'s the real test.',
+    };
+
+    // ---------- elements ----------
+    var $md = document.getElementById("md");
+    var $preview = document.getElementById("preview");
+    var $status = document.getElementById("status");
+    var $stats = document.getElementById("stats");
+    var $buildBtn = document.getElementById("build-btn");
+    var $previewBtn = document.getElementById("preview-btn");
+    var $launchBtn = document.getElementById("launch-btn");
+
+    document.querySelectorAll(".example-btn").forEach(function (b) {
+      b.addEventListener("click", function () {
+        $md.value = EXAMPLES[b.dataset.example].replace(/\\\\n/g, "\\n");
+        renderPreview();
+      });
+    });
+
+    // initialise with the POSH example
+    $md.value = EXAMPLES.posh.replace(/\\\\n/g, "\\n");
+
+    // ---------- core flow ----------
+    function getCourse() {
+      var parsed = window.__SC_parse($md.value);
+      var meta = parsed.meta || {};
+      return {
+        id: "course",
+        title: meta.title || "Untitled course",
+        duration: meta.duration || null,
+        passing_score: meta.passing_score || 80,
+        language: meta.language || "en",
+        xapi: meta.xapi || null,
+        slides: parsed.slides,
+      };
+    }
+
+    function validate(course) {
+      var errs = [];
+      if (!course.slides.length) errs.push("No slides parsed — did you use '## Slide:' headings?");
+      var ids = {};
+      course.slides.forEach(function (s) {
+        if (ids[s.id]) errs.push("Duplicate slide id: " + s.id);
+        ids[s.id] = true;
+        if (s.type === "check") {
+          if (!s.question) errs.push("Slide '" + s.id + "': missing [Q]");
+          if (!s.choices.length) errs.push("Slide '" + s.id + "': no [A]");
+          if (!s.choices.some(function (c) { return c.correct; }))
+            errs.push("Slide '" + s.id + "': no correct [A*]");
+        }
+        if (s.type === "branch" && !s.options.length) errs.push("Slide '" + s.id + "': no [Option:]");
+      });
+      return errs;
+    }
+
+    function setStatus(msg, kind) {
+      $status.textContent = msg;
+      $status.className = "status " + (kind || "");
+    }
+
+    function renderPreview() {
+      try {
+        var c = getCourse();
+        var errs = validate(c);
+        var n = c.slides.length;
+        var checks = c.slides.filter(function (s) { return s.type === "check"; }).length;
+        var branches = c.slides.filter(function (s) { return s.type === "branch"; }).length;
+        $stats.textContent = n + " slides · " + checks + " checks · " + branches + " branches";
+
+        if (errs.length) {
+          $preview.innerHTML = '<div class="empty" style="color:var(--err)">' +
+            errs.map(function (e) { return "✗ " + e; }).join("<br>") + '</div>';
+          setStatus("Storyboard has " + errs.length + " issue(s) — fix before building.", "err");
+          $buildBtn.disabled = true;
+          return;
+        }
+
+        $buildBtn.disabled = false;
+        var html = c.slides.map(function (s) {
+          var badge = '<span class="badge ' + s.type + '">' + s.type + '</span>';
+          var body = "";
+          if (s.narration) body += '<p class="narration">' + escape(s.narration) + '</p>';
+          if (s.question) body += '<p class="q">Q: ' + escape(s.question) + '</p>';
+          if (s.choices && s.choices.length) {
+            body += '<ul style="list-style:none;padding:0;margin:0">' +
+              s.choices.map(function (c, i) {
+                return '<li class="choice' + (c.correct ? " correct" : "") + '">' +
+                  String.fromCharCode(65 + i) + ". " + escape(c.text) +
+                  (c.correct ? " ✓" : "") + '</li>';
+              }).join("") +
+              '</ul>';
+          }
+          if (s.prompt) body += '<p>' + escape(s.prompt) + '</p>';
+          if (s.options && s.options.length) {
+            body += '<ul style="list-style:none;padding:0;margin:0">' +
+              s.options.map(function (o) {
+                return '<li class="choice">→ ' + escape(o.label) + ' <span style="color:var(--dim);font-family:ui-monospace,monospace">→ ' + escape(o.goto) + '</span></li>';
+              }).join("") +
+              '</ul>';
+          }
+          return '<div class="preview-slide"><h3>' + badge + escape(s.title || s.id) + '</h3>' + body + '</div>';
+        }).join("");
+        $preview.innerHTML = html;
+        setStatus("✓ Parsed " + n + " slides cleanly.", "ok");
+      } catch (e) {
+        $preview.innerHTML = '<div class="empty" style="color:var(--err)">Parser error: ' + escape(e.message) + '</div>';
+        setStatus("Parser error: " + e.message, "err");
+      }
+    }
+
+    function escape(s) {
+      return String(s == null ? "" : s)
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
+    function decodeBase64(b64) {
+      var bin = atob(b64);
+      var bytes = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      return bytes;
+    }
+
+    function buildZip() {
+      if (typeof JSZip === "undefined") {
+        setStatus("JSZip failed to load — try refreshing, or use the CLI: `node src/storycraft.js <file.md>`", "err");
+        return;
+      }
+      var c = getCourse();
+      var errs = validate(c);
+      if (errs.length) { setStatus("Fix " + errs.length + " issue(s) first.", "err"); return; }
+
+      var zip = new JSZip();
+
+      // Runtime files (verbatim from CLI build)
+      Object.keys(window.__SC_RUNTIME).forEach(function (name) {
+        if (name === "player.html") return; // we templatise this below
+        zip.file(name, decodeBase64(window.__SC_RUNTIME[name]));
+      });
+
+      // Render player.html with course JSON injected
+      var tmpl = new TextDecoder().decode(decodeBase64(window.__SC_RUNTIME["player.html"]));
+      var html = tmpl
+        .replace(/{{LANG}}/g, c.language)
+        .replace(/{{TITLE}}/g, escape(c.title))
+        .replace(/{{COURSE_JSON}}/g, JSON.stringify(c));
+      zip.file("player.html", html);
+
+      // Manifest
+      var files = ["player.html", "player.css", "player.js", "scorm12-api.js"];
+      zip.file("imsmanifest.xml", window.__SC_manifest(c, { files: files }));
+
+      setStatus("Zipping…", "");
+      zip.generateAsync({ type: "blob", compression: "DEFLATE" }).then(function (blob) {
+        var url = URL.createObjectURL(blob);
+        var slug = (c.title || "course").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "course";
+        var a = document.createElement("a");
+        a.href = url;
+        a.download = slug + ".zip";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        setStatus("✓ " + slug + ".zip (" + Math.round(blob.size / 1024) + " KB) ready — upload to any SCORM 1.2 LMS.", "ok");
+      });
+    }
+
+    function launchInWindow() {
+      var c = getCourse();
+      var errs = validate(c);
+      if (errs.length) { setStatus("Fix " + errs.length + " issue(s) first.", "err"); return; }
+
+      var css = new TextDecoder().decode(decodeBase64(window.__SC_RUNTIME["player.css"]));
+      var apiJs = new TextDecoder().decode(decodeBase64(window.__SC_RUNTIME["scorm12-api.js"]));
+      var playerJs = new TextDecoder().decode(decodeBase64(window.__SC_RUNTIME["player.js"]));
+
+      var doc = '<!doctype html><html lang="' + c.language + '"><head><meta charset="utf-8"><title>' + escape(c.title) + '</title>' +
+        '<style>' + css + '</style>' +
+        '<script>window.__COURSE__ = ' + JSON.stringify(c) + ';<\/script>' +
+        '</head><body>' +
+        '<header><h1 id="course-title">' + escape(c.title) + '</h1><span class="branding" aria-hidden="true">Storycraft</span></header>' +
+        '<div id="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="progress"></div></div>' +
+        '<main id="stage" tabindex="-1"></main>' +
+        '<footer>Powered by Storycraft · SCORM 1.2 compliant</footer>' +
+        '<script>' + apiJs + '<\/script>' +
+        '<script>' + playerJs + '<\/script>' +
+        '</body></html>';
+
+      var blob = new Blob([doc], { type: "text/html" });
+      window.open(URL.createObjectURL(blob), "_blank");
+      setStatus("✓ Launched in a new tab — running without an LMS (SCORM calls are no-ops).", "ok");
+    }
+
+    $buildBtn.addEventListener("click", buildZip);
+    $previewBtn.addEventListener("click", renderPreview);
+    $launchBtn.addEventListener("click", launchInWindow);
+    $md.addEventListener("input", debounce(renderPreview, 350));
+
+    function debounce(fn, ms) { var t; return function () { clearTimeout(t); t = setTimeout(fn, ms); }; }
+
+    renderPreview();
+  </script>
+</body>
+</html>
