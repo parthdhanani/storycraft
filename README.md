@@ -1,5 +1,9 @@
 # Storycraft
 
+[![tests](https://github.com/parthdhanani/storycraft/actions/workflows/test.yml/badge.svg)](https://github.com/parthdhanani/storycraft/actions/workflows/test.yml)
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![node](https://img.shields.io/badge/node-%E2%89%A518-brightgreen.svg)](https://nodejs.org)
+
 > Markdown storyboard → SCORM 1.2 package. CLI plus an in-browser playground.
 
 ```bash
