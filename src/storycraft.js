@@ -11,7 +11,7 @@
 
 var fs = require("fs");
 var path = require("path");
-var { execSync } = require("child_process");
+var { execSync, spawnSync } = require("child_process");
 var parser = require("./parser");
 var manifestGen = require("./manifest");
 
@@ -139,7 +139,7 @@ function buildOne(srcPath, args, locale) {
 
   var baseName = path.basename(srcPath, path.extname(srcPath));
   var stageDir = args.unzippedDir
-    ? path.resolve(args.unzippedDir)
+    ? path.resolve(args.unzippedDir + localeSuffix)
     : path.resolve(path.dirname(srcPath), "..", "dist", baseName + localeSuffix);
   ensureDir(stageDir);
 
@@ -151,7 +151,7 @@ function buildOne(srcPath, args, locale) {
   });
 
   var tmpl = readFile(path.join(runtimeDir, "player.html"));
-  var courseJSON = JSON.stringify(course);
+  var courseJSON = JSON.stringify(course).replace(/<\/script>/gi, "<\\/script>");
   var html = tmpl
     .replace(/{{LANG}}/g, course.language)
     .replace(/{{TITLE}}/g, course.title.replace(/[<>"&]/g, function (c) {
@@ -190,10 +190,9 @@ function buildOne(srcPath, args, locale) {
       : path.resolve(path.dirname(srcPath), "..", "dist", baseName + localeSuffix + ".zip");
     ensureDir(path.dirname(outZip));
     try { fs.unlinkSync(outZip); } catch (e) {}
-    execSync('find "' + stageDir + '" -exec touch -h -t 202401010000 {} +', { stdio: "ignore" });
-    execSync(
-      'cd "' + stageDir + '" && find . -type f -o -type d | LC_ALL=C sort | zip -qX -@ "' + outZip + '"',
-      { stdio: "inherit", shell: "/bin/bash" }
+    spawnSync("find", [stageDir, "-exec", "touch", "-h", "-t", "202401010000", "{}", "+"], { stdio: "ignore" });
+    spawnSync("bash", ["-c", 'find . -type f -o -type d | LC_ALL=C sort | zip -qX -@ "$1"', "--", outZip],
+      { cwd: stageDir, stdio: "inherit" }
     );
     pkgInfo.zip = outZip;
   }

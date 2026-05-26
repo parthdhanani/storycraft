@@ -58,6 +58,7 @@
   var $title = document.getElementById("course-title");
   $title.textContent = course.title;
   document.title = course.title;
+  $progress.setAttribute("aria-label", "Course progress");
 
   function renderSlide(slide) {
     state.currentId = slide.id;
@@ -174,6 +175,7 @@
     // SCORM 1.2 indexes interactions starting from 0
     var idx = Object.keys(state.answers).length - 1;
     SCORM.set("cmi.interactions." + idx + ".id", slide.id);
+    SCORM.set("cmi.interactions." + idx + ".type", "choice");
     SCORM.set("cmi.interactions." + idx + ".student_response", String(choiceIdx));
     SCORM.set("cmi.interactions." + idx + ".result", correct ? "correct" : "wrong");
     SCORM.commit();
