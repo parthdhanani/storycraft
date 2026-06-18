@@ -11,7 +11,8 @@
     "playground": "node build-playground.js",
     "example": "node src/storycraft.js examples/posh-awareness.md",
     "example:hi": "node src/storycraft.js examples/posh-awareness.md --locale hi",
-    "test": "node test/run.js"
+    "test": "node test/run.js",
+    "lint": "eslint ."
   },
   "keywords": [
     "scorm",
@@ -46,5 +47,10 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/parthdhanani/storycraft.git"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "eslint": "^9.0.0",
+    "globals": "^15.0.0"
   }
 }

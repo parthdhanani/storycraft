@@ -11,7 +11,7 @@
 
 var fs = require("fs");
 var path = require("path");
-var { execSync, spawnSync } = require("child_process");
+var { spawnSync } = require("child_process");
 var parser = require("./parser");
 var manifestGen = require("./manifest");
 
@@ -95,7 +95,7 @@ function validate(course) {
     if (s.type === "branch") {
       if (!s.options.length) errors.push("Slide '" + s.id + "': no [Option:] branches");
       s.options.forEach(function (opt) {
-        if (!ids.hasOwnProperty(opt.goto) && !course.slides.some(function (x) { return x.id === opt.goto; }))
+        if (!Object.prototype.hasOwnProperty.call(ids, opt.goto) && !course.slides.some(function (x) { return x.id === opt.goto; }))
           errors.push("Slide '" + s.id + "': branch points to unknown slide '" + opt.goto + "'");
       });
     }

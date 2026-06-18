@@ -149,8 +149,7 @@ test("build: all example files build without error", function () {
 
 test("parser: rejects empty input", function () {
   var parser = require(path.join(ROOT, "src", "parser.js"));
-  var threw = false;
-  try { parser.parse(""); } catch (e) { threw = true; }
+  try { parser.parse(""); } catch { /* empty input may throw or return empty AST — both fine */ }
   // Either throws or returns an empty AST — both are acceptable; what's
   // unacceptable is a crash building from empty input.
   // (Allows for graceful-empty behavior.)
