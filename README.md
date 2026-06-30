@@ -15,6 +15,10 @@ A small internal tool extracted from the Kidvento authoring pipeline and open-so
 
 It is also the reference build that exercises every [scorm-kit](https://github.com/parthdhanani/scorm-kit) subcommand. If you want to see what a clean SCORM 1.2 package looks like coming out of a deterministic build, run `storycraft examples/posh-awareness.md` and feed the zip into `scorm-kit lint`.
 
+## Attribution
+
+The Storycraft playground uses [scorm-again](https://github.com/jcputney/scorm-again) (MIT © Jonathan Putney) to power its mock LMS preview. When you click "Launch with mock LMS", scorm-again provides a spec-compliant `window.API` in the parent frame so the course runs against a real SCORM runtime — not a no-op shim.
+
 ## Why a separate tool
 
 Most teams treat the storyboard and the published course as two artifacts. Reviewers comment on a doc, the developer rebuilds it in Storyline, and any subsequent edit becomes a two-place update. For the modules where that round-trip is the bottleneck — not the visual design — Storycraft collapses it: the storyboard is the source of truth and the SCORM package is a deterministic build artifact (same input, byte-identical zip).
