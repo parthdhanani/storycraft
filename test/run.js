@@ -147,6 +147,13 @@ test("build: all example files build without error", function () {
   });
 });
 
+test("playground: index.html is in sync with template + runtime sources", function () {
+  // index.html is generated; editing it by hand (or changing runtime/ without
+  // rebuilding) silently drifts the browser build from the CLI build.
+  var r = spawnSync("node", [path.join(ROOT, "build-playground.js"), "--check"], { encoding: "utf8" });
+  assert(r.status === 0, (r.stderr || r.stdout).trim());
+});
+
 test("parser: rejects empty input", function () {
   var parser = require(path.join(ROOT, "src", "parser.js"));
   try { parser.parse(""); } catch { /* empty input may throw or return empty AST — both fine */ }

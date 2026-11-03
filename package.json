@@ -9,6 +9,7 @@
   "scripts": {
     "build": "echo 'Usage: storycraft <file.md> [options]' && exit 1",
     "playground": "node build-playground.js",
+    "playground:check": "node build-playground.js --check",
     "example": "node src/storycraft.js examples/posh-awareness.md",
     "example:hi": "node src/storycraft.js examples/posh-awareness.md --locale hi",
     "test": "node test/run.js",
