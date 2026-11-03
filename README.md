@@ -35,15 +35,41 @@ It does **not** replace Storyline (or Rise, or Captivate) for visual-heavy or in
 ## Quick start
 
 ```bash
-git clone <repo>
+git clone https://github.com/parthdhanani/storycraft
 cd storycraft
 node src/storycraft.js examples/posh-awareness.md
 # → dist/posh-awareness.zip
+
+node src/storycraft.js examples/posh-awareness.md --locale hi
+# → dist/posh-awareness-hi.zip  (reads examples/posh-awareness.hi.md)
 ```
+
+The CLI needs only Node ≥ 18 plus the standard `bash`, `find` and `zip` binaries. `npm install` isn't required to build.
 
 Upload the zip to Moodle as a SCORM activity. It tracks completion, score, and per-question results via the SCORM 1.2 API.
 
-Or open `playground/index.html` in any browser — paste Markdown, download a SCORM zip in the browser. Pure client-side, no install.
+## Playground
+
+![Storycraft playground: Markdown storyboard on the left, structured preview on the right](docs/playground.png)
+
+`playground/index.html` is a single self-contained page. Paste or edit Markdown, see the structured preview live, and download a SCORM zip built in the browser. The page loads two libraries from CDNs: JSZip, for building the zip, and [scorm-again](https://github.com/jcputney/scorm-again), for the mock LMS. Everything else is inlined.
+
+```bash
+python3 -m http.server -d playground 8080   # then open http://localhost:8080
+```
+
+**Launch with mock LMS** runs the course in a modal against a real SCORM 1.2 runtime, and the status bar tracks the session:
+
+![Course running in the playground's scorm-again mock LMS, status "SCORM session active"](docs/playground-launch.png)
+
+Opening the file directly (`file://`) works for editing, preview and Build. The mock-LMS session only connects when the page is served over `http://`, because browsers treat `file://` pages as opaque origins, so the course iframe can't reach `window.parent.API`.
+
+`playground/index.html` is generated, so don't edit it by hand. Change `playground/playground.template.html`, `src/` or `runtime/`, then run:
+
+```bash
+npm run playground          # rebuild playground/index.html
+npm run playground:check    # exit 1 if the committed file is stale (also run by npm test)
+```
 
 ## Storyboard syntax
 
@@ -109,7 +135,19 @@ parser.js (AST) ──► storycraft.js ──┬──► imsmanifest.xml
                                     └──► zip
 ```
 
-Runtime is **pure JS, no dependencies, no build step**. CLI is **pure Node, no `npm install`**. The whole thing is ~700 lines of code. Runs offline on any machine with Node and `zip`.
+Runtime is **pure JS, no dependencies, no build step**. CLI is **pure Node, no `npm install`**. The whole thing is ~900 lines of JS. Runs offline on any machine with Node and `zip`.
+
+The playground reuses the same parser, manifest generator and runtime. `build-playground.js` inlines `src/parser.js`, `src/manifest.js` and the `runtime/` files into `playground/playground.template.html`, so a browser-built zip matches a CLI-built one.
+
+## Tests
+
+```bash
+npm ci          # dev-only: eslint
+npm test        # 13 tests, node test/run.js: CLI, deterministic builds, manifest, locales, playground sync
+npm run lint    # eslint .
+```
+
+All tests run offline. CI (`.github/workflows/test.yml`) runs lint on Node 22 and the tests on Node 18, 20 and 22.
 
 ## What it doesn't do (yet)
 
@@ -120,7 +158,6 @@ Runtime is **pure JS, no dependencies, no build step**. CLI is **pure Node, no `
 
 ## Roadmap
 
-- `--locale <lang>` for per-language builds from one source + override files
 - `storycraft watch` for live-rebuild during authoring
 - `storycraft lint` to validate a storyboard without building
 - cmi5 target alongside SCORM 1.2
