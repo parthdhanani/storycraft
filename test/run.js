@@ -154,6 +154,18 @@ test("playground: index.html is in sync with template + runtime sources", functi
   assert(r.status === 0, (r.stderr || r.stdout).trim());
 });
 
+test("playground: every inline <script> in index.html parses", function () {
+  // Guards against escaping bugs in the template (e.g. a stray \\' in the
+  // EXAMPLES strings) that leave the whole page dead with no test failing.
+  var html = fs.readFileSync(path.join(ROOT, "playground", "index.html"), "utf8");
+  var re = /<script>([\s\S]*?)<\/script>/g, m, n = 0;
+  while ((m = re.exec(html)) !== null) {
+    n++;
+    try { new Function(m[1]); } catch (e) { throw new Error("inline script #" + n + ": " + e.message); }
+  }
+  assert(n >= 4, "expected >= 4 inline scripts, found " + n);
+});
+
 test("parser: rejects empty input", function () {
   var parser = require(path.join(ROOT, "src", "parser.js"));
   try { parser.parse(""); } catch { /* empty input may throw or return empty AST — both fine */ }
