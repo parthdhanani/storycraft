@@ -6,7 +6,10 @@
  * HTML page so the playground works offline and can be uploaded to any
  * static host (psidex.com, GitHub Pages, etc.).
  *
- * Output: dist/playground.html
+ * Output: playground/index.html
+ *
+ *   node build-playground.js           write playground/index.html
+ *   node build-playground.js --check   exit 1 if the committed file is stale
  */
 "use strict";
 
@@ -46,6 +49,16 @@ var html = read(tmpl)
   .replace("/*__PARSER__*/", parserSrc)
   .replace("/*__MANIFEST__*/", manifestSrc)
   .replace("/*__RUNTIME_FILES__*/", "window.__SC_RUNTIME = " + JSON.stringify(runtimeFiles) + ";");
+
+if (process.argv.indexOf("--check") !== -1) {
+  var current = fs.existsSync(out) ? read(out) : "";
+  if (current !== html) {
+    console.error("✗ " + path.relative(root, out) + " is stale — run `npm run playground` and commit the result.");
+    process.exit(1);
+  }
+  console.log("✓ " + path.relative(root, out) + " is up to date");
+  process.exit(0);
+}
 
 fs.mkdirSync(path.dirname(out), { recursive: true });
 fs.writeFileSync(out, html);

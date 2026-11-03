@@ -81,7 +81,7 @@
       <div class="actions">
         <button class="btn primary" id="build-btn">⤓ Build SCORM zip</button>
         <button class="btn" id="preview-btn">Preview</button>
-        <button class="btn" id="launch-btn">Launch (no LMS)</button>
+        <button class="btn" id="launch-btn">Launch with mock LMS</button>
         <span style="flex:1"></span>
         <span class="pill" id="stats">—</span>
       </div>
@@ -106,16 +106,29 @@
   <script>/*__MANIFEST__*/</script>
   <!-- runtime file payloads (base64) -->
   <script>/*__RUNTIME_FILES__*/</script>
+  <!-- Mock LMS overlay (iframe shell for scorm-again-powered preview) -->
+  <div id="launch-modal" style="display:none;position:fixed;inset:0;z-index:100;background:rgba(0,0,0,0.78);align-items:center;justify-content:center;">
+    <div style="width:min(900px,95vw);height:85vh;background:var(--panel);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;border:1px solid var(--line);">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line);gap:12px;flex-shrink:0;">
+        <span id="lms-status" style="font-size:0.82rem;color:var(--dim);">Waiting for course to connect…</span>
+        <button id="launch-close" class="btn" style="padding:5px 12px;font-size:0.8rem;">✕ Close</button>
+      </div>
+      <iframe id="launch-frame" title="Course preview" style="flex:1;border:0;background:var(--bg);"></iframe>
+    </div>
+  </div>
+
+  <!-- scorm-again by Jonathan Putney (MIT) — https://github.com/jcputney/scorm-again -->
+  <script src="https://cdn.jsdelivr.net/npm/scorm-again@3.0.5/dist/scorm12.min.js"></script>
   <!-- JSZip (vendored from CDN; falls back gracefully if blocked) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
   <script>
     // ---------- examples ----------
     var EXAMPLES = {
-      posh: '---\\ntitle: Workplace Respect — POSH Awareness\\npassing_score: 70\\nlanguage: en\\n---\\n\\n## Slide: Welcome\\n[Narration] Welcome to this 15-minute course on workplace respect.\\n\\nBy the end you will be able to:\\n\\n- Recognise behaviour covered under the POSH Act, 2013\\n- Initiate a complaint through the correct channel\\n\\n## Check: Recognising harassment\\n[Q] A colleague repeatedly sends jokes with sexual innuendo to a co-worker over Slack, despite being asked to stop. Is this harassment under POSH?\\n[A*] Yes — repeated, unwelcome verbal/written conduct of a sexual nature qualifies.\\n[A] No — Slack messages aren\\'t covered.\\n[Feedback correct] Correct. POSH covers any medium of workplace communication.\\n[Feedback incorrect] Reconsider. POSH applies wherever work happens, including digital channels.\\n\\n## Branch: The hallway moment\\n[Prompt] You overhear a senior colleague making a suggestive comment to a new hire. The new hire looks uncomfortable but does not respond. What do you do?\\n[Option: Speak up in the moment → moment-speak]\\n[Option: Check in privately afterwards → moment-check]\\n\\n## Slide: You speak up\\n[Id] moment-speak\\nDirect intervention can be powerful — when safe.\\n\\n## Slide: You check in privately\\n[Id] moment-check\\nQuiet support is often what the recipient needs most.\\n\\n## Slide: Course complete\\n[Narration] You\\'ve completed the module.',
-      manager: '---\\ntitle: What You Didn\\'t Say — Communication for First-Time Managers\\npassing_score: 75\\n---\\n\\n## Slide: Before we start\\n[Narration] This module is about the things you don\\'t say. The pause. The "sounds good." The Slack message you typed and didn\\'t send.\\n\\n## Slide: A scenario\\nPriya, four months on your team, sent you her project plan Tuesday. You said "thanks Priya" and moved on. Today she has DMed: "was the plan okay?" You have 90 seconds.\\n\\n## Branch: How do you reply?\\n[Prompt] What do you do?\\n[Option: Quick "yes all good" → reply-quick]\\n[Option: Take 5 min, write specifics → reply-specific]\\n\\n## Slide: The quick reply\\n[Id] reply-quick\\nPolite. Empty calories. Praise has a half-life.\\n\\n## Slide: The specific response\\n[Id] reply-specific\\nThree minutes well spent. The next meeting will survive.\\n\\n## Check: What was Priya actually asking for?\\n[Q] When a four-month report asks "was it okay?", what are they usually asking for?\\n[A] Approval\\n[A*] Specific calibration\\n[A] Reassurance\\n[Feedback correct] Right. They want to know what to do again and what to do differently.\\n\\n## Slide: Course complete\\nThanks for working through this.',
-      oncall: '---\\ntitle: The First Page — Incident Response\\npassing_score: 75\\n---\\n\\n## Slide: This is not the runbook\\n[Narration] The runbook lives in your wiki. This module is about the seven minutes before you open it.\\n\\nThe goal of the first minute is not to fix anything. The goal is orientation — service, signal, scope.\\n\\n## Slide: Page one\\n2:47 a.m. payments-api error rate 100% in eu-west-1. What do you do first?\\n\\n## Branch: First move\\n[Prompt] First action?\\n[Option: Open the runbook → page1-runbook]\\n[Option: Check the deploy log → page1-deploy]\\n[Option: Page a second responder → page1-second]\\n\\n## Slide: Runbook first\\n[Id] page1-runbook\\nDefensible. Usually right. At 100% error rate, "did we just deploy" is the cheaper hypothesis.\\n\\n## Slide: Deploy log first\\n[Id] page1-deploy\\nRight move at 2:47 a.m. The cheapest possible explanation for "everything is broken" is "someone just deployed."\\n\\n## Slide: Page second responder\\n[Id] page1-second\\nOften premature. You can still describe the incident in two sentences. Page the second responder when you can\\'t.\\n\\n## Check: Through-line\\n[Q] What is the most important first action?\\n[A] Acknowledge and notify\\n[A*] Read the alert and form a one-sentence read of what is happening\\n[A] Open the runbook\\n[Feedback correct] Right. Orientation first.\\n\\n## Slide: Course complete\\nIncidents are supposed to be non-events.',
-      math: '---\\ntitle: Why Negative × Negative = Positive\\npassing_score: 80\\n---\\n\\n## Slide: The question\\n[Narration] You\\'ve been told that negative × negative = positive is "just a rule." It is not.\\n\\n## Slide: We start with\\n- 3 × 4 = 12\\n- 3 × 0 = 0\\n- The distributive property: 3 × (4 + 2) = 3×4 + 3×2\\n\\n## Slide: Positive × negative\\nFrom 4 + (-4) = 0, multiply both sides by 3:\\n\\n3 × (4 + (-4)) = 0\\n\\nDistribute: 12 + 3 × (-4) = 0. So 3 × (-4) must be -12.\\n\\n## Check: Apply it\\n[Q] Using the same trick, what must 2 × (-5) equal?\\n[A] 10\\n[A*] -10\\n[A] 0\\n[Feedback correct] Exactly. 10 + 2×(-5) = 0, so 2×(-5) = -10.\\n\\n## Slide: Negative × negative\\nNow start with 3 + (-3) = 0, multiply by (-4): -12 + (-4)×(-3) = 0. So (-4)×(-3) = +12.\\n\\n## Check: Best explanation\\n[Q] Best way to explain why (-2)×(-3) = +6?\\n[A] Two negatives make a positive — it\\'s a rule\\n[A*] Distributive + zero-product — derived, not declared\\n[A] Negatives cancel\\n[Feedback correct] Right. Every rule in mathematics has a reason; go find it.\\n\\n## Slide: Course complete\\nExplain it to someone tonight. That\\'s the real test.',
+      posh: '---\\ntitle: Workplace Respect — POSH Awareness\\npassing_score: 70\\nlanguage: en\\n---\\n\\n## Slide: Welcome\\n[Narration] Welcome to this 15-minute course on workplace respect.\\n\\nBy the end you will be able to:\\n\\n- Recognise behaviour covered under the POSH Act, 2013\\n- Initiate a complaint through the correct channel\\n\\n## Check: Recognising harassment\\n[Q] A colleague repeatedly sends jokes with sexual innuendo to a co-worker over Slack, despite being asked to stop. Is this harassment under POSH?\\n[A*] Yes — repeated, unwelcome verbal/written conduct of a sexual nature qualifies.\\n[A] No — Slack messages aren\'t covered.\\n[Feedback correct] Correct. POSH covers any medium of workplace communication.\\n[Feedback incorrect] Reconsider. POSH applies wherever work happens, including digital channels.\\n\\n## Branch: The hallway moment\\n[Prompt] You overhear a senior colleague making a suggestive comment to a new hire. The new hire looks uncomfortable but does not respond. What do you do?\\n[Option: Speak up in the moment → moment-speak]\\n[Option: Check in privately afterwards → moment-check]\\n\\n## Slide: You speak up\\n[Id] moment-speak\\nDirect intervention can be powerful — when safe.\\n\\n## Slide: You check in privately\\n[Id] moment-check\\nQuiet support is often what the recipient needs most.\\n\\n## Slide: Course complete\\n[Narration] You\'ve completed the module.',
+      manager: '---\\ntitle: What You Didn\'t Say — Communication for First-Time Managers\\npassing_score: 75\\n---\\n\\n## Slide: Before we start\\n[Narration] This module is about the things you don\'t say. The pause. The "sounds good." The Slack message you typed and didn\'t send.\\n\\n## Slide: A scenario\\nPriya, four months on your team, sent you her project plan Tuesday. You said "thanks Priya" and moved on. Today she has DMed: "was the plan okay?" You have 90 seconds.\\n\\n## Branch: How do you reply?\\n[Prompt] What do you do?\\n[Option: Quick "yes all good" → reply-quick]\\n[Option: Take 5 min, write specifics → reply-specific]\\n\\n## Slide: The quick reply\\n[Id] reply-quick\\nPolite. Empty calories. Praise has a half-life.\\n\\n## Slide: The specific response\\n[Id] reply-specific\\nThree minutes well spent. The next meeting will survive.\\n\\n## Check: What was Priya actually asking for?\\n[Q] When a four-month report asks "was it okay?", what are they usually asking for?\\n[A] Approval\\n[A*] Specific calibration\\n[A] Reassurance\\n[Feedback correct] Right. They want to know what to do again and what to do differently.\\n\\n## Slide: Course complete\\nThanks for working through this.',
+      oncall: '---\\ntitle: The First Page — Incident Response\\npassing_score: 75\\n---\\n\\n## Slide: This is not the runbook\\n[Narration] The runbook lives in your wiki. This module is about the seven minutes before you open it.\\n\\nThe goal of the first minute is not to fix anything. The goal is orientation — service, signal, scope.\\n\\n## Slide: Page one\\n2:47 a.m. payments-api error rate 100% in eu-west-1. What do you do first?\\n\\n## Branch: First move\\n[Prompt] First action?\\n[Option: Open the runbook → page1-runbook]\\n[Option: Check the deploy log → page1-deploy]\\n[Option: Page a second responder → page1-second]\\n\\n## Slide: Runbook first\\n[Id] page1-runbook\\nDefensible. Usually right. At 100% error rate, "did we just deploy" is the cheaper hypothesis.\\n\\n## Slide: Deploy log first\\n[Id] page1-deploy\\nRight move at 2:47 a.m. The cheapest possible explanation for "everything is broken" is "someone just deployed."\\n\\n## Slide: Page second responder\\n[Id] page1-second\\nOften premature. You can still describe the incident in two sentences. Page the second responder when you can\'t.\\n\\n## Check: Through-line\\n[Q] What is the most important first action?\\n[A] Acknowledge and notify\\n[A*] Read the alert and form a one-sentence read of what is happening\\n[A] Open the runbook\\n[Feedback correct] Right. Orientation first.\\n\\n## Slide: Course complete\\nIncidents are supposed to be non-events.',
+      math: '---\\ntitle: Why Negative × Negative = Positive\\npassing_score: 80\\n---\\n\\n## Slide: The question\\n[Narration] You\'ve been told that negative × negative = positive is "just a rule." It is not.\\n\\n## Slide: We start with\\n- 3 × 4 = 12\\n- 3 × 0 = 0\\n- The distributive property: 3 × (4 + 2) = 3×4 + 3×2\\n\\n## Slide: Positive × negative\\nFrom 4 + (-4) = 0, multiply both sides by 3:\\n\\n3 × (4 + (-4)) = 0\\n\\nDistribute: 12 + 3 × (-4) = 0. So 3 × (-4) must be -12.\\n\\n## Check: Apply it\\n[Q] Using the same trick, what must 2 × (-5) equal?\\n[A] 10\\n[A*] -10\\n[A] 0\\n[Feedback correct] Exactly. 10 + 2×(-5) = 0, so 2×(-5) = -10.\\n\\n## Slide: Negative × negative\\nNow start with 3 + (-3) = 0, multiply by (-4): -12 + (-4)×(-3) = 0. So (-4)×(-3) = +12.\\n\\n## Check: Best explanation\\n[Q] Best way to explain why (-2)×(-3) = +6?\\n[A] Two negatives make a positive — it\'s a rule\\n[A*] Distributive + zero-product — derived, not declared\\n[A] Negatives cancel\\n[Feedback correct] Right. Every rule in mathematics has a reason; go find it.\\n\\n## Slide: Course complete\\nExplain it to someone tonight. That\'s the real test.',
     };
 
     // ---------- elements ----------
@@ -129,13 +142,13 @@
 
     document.querySelectorAll(".example-btn").forEach(function (b) {
       b.addEventListener("click", function () {
-        $md.value = EXAMPLES[b.dataset.example].replace(/\\\\n/g, "\\n");
+        $md.value = EXAMPLES[b.dataset.example].replace(/\\n/g, "\n");
         renderPreview();
       });
     });
 
     // initialise with the POSH example
-    $md.value = EXAMPLES.posh.replace(/\\\\n/g, "\\n");
+    $md.value = EXAMPLES.posh.replace(/\\n/g, "\n");
 
     // ---------- core flow ----------
     function getCourse() {
@@ -281,16 +294,11 @@
       });
     }
 
-    function launchInWindow() {
-      var c = getCourse();
-      var errs = validate(c);
-      if (errs.length) { setStatus("Fix " + errs.length + " issue(s) first.", "err"); return; }
-
+    function buildCourseDoc(c) {
       var css = new TextDecoder().decode(decodeBase64(window.__SC_RUNTIME["player.css"]));
       var apiJs = new TextDecoder().decode(decodeBase64(window.__SC_RUNTIME["scorm12-api.js"]));
       var playerJs = new TextDecoder().decode(decodeBase64(window.__SC_RUNTIME["player.js"]));
-
-      var doc = '<!doctype html><html lang="' + c.language + '"><head><meta charset="utf-8"><title>' + escape(c.title) + '</title>' +
+      return '<!doctype html><html lang="' + c.language + '"><head><meta charset="utf-8"><title>' + escape(c.title) + '</title>' +
         '<style>' + css + '</style>' +
         '<script>window.__COURSE__ = ' + JSON.stringify(c) + ';<\/script>' +
         '</head><body>' +
@@ -301,15 +309,55 @@
         '<script>' + apiJs + '<\/script>' +
         '<script>' + playerJs + '<\/script>' +
         '</body></html>';
-
-      var blob = new Blob([doc], { type: "text/html" });
-      window.open(URL.createObjectURL(blob), "_blank");
-      setStatus("✓ Launched in a new tab — running without an LMS (SCORM calls are no-ops).", "ok");
     }
+
+    function launchWithMockLms() {
+      var c = getCourse();
+      var errs = validate(c);
+      if (errs.length) { setStatus("Fix " + errs.length + " issue(s) first.", "err"); return; }
+
+      if (typeof window.Scorm12API === "undefined") {
+        // scorm-again CDN unavailable — launch without LMS as fallback.
+        var blob0 = new Blob([buildCourseDoc(c)], { type: "text/html" });
+        window.open(URL.createObjectURL(blob0), "_blank");
+        setStatus("✓ Launched (no LMS — scorm-again CDN unavailable).", "ok");
+        return;
+      }
+
+      // Set window.API using scorm-again so the iframe course finds it via window.parent.API.
+      window.API = new window.Scorm12API({ sendFullCommit: false, lmsCommitUrl: false });
+      var $lmsStatus = document.getElementById("lms-status");
+      window.API.on("LMSInitialize", function () {
+        $lmsStatus.textContent = "SCORM session active";
+        $lmsStatus.style.color = "var(--ok)";
+      });
+      window.API.on("LMSFinish", function () {
+        $lmsStatus.textContent = "Session finished";
+        $lmsStatus.style.color = "var(--dim)";
+      });
+
+      var blob = new Blob([buildCourseDoc(c)], { type: "text/html" });
+      var blobUrl = URL.createObjectURL(blob);
+      $lmsStatus.textContent = "Waiting for course to connect…";
+      $lmsStatus.style.color = "var(--dim)";
+      document.getElementById("launch-frame").src = blobUrl;
+      document.getElementById("launch-modal").style.display = "flex";
+
+      setStatus("✓ Launched with scorm-again mock LMS — SCORM session tracked.", "ok");
+    }
+
+    document.getElementById("launch-close").addEventListener("click", function () {
+      var frame = document.getElementById("launch-frame");
+      var oldUrl = frame.src;
+      frame.src = "";
+      try { URL.revokeObjectURL(oldUrl); } catch (e) {}
+      document.getElementById("launch-modal").style.display = "none";
+      window.API = null;
+    });
 
     $buildBtn.addEventListener("click", buildZip);
     $previewBtn.addEventListener("click", renderPreview);
-    $launchBtn.addEventListener("click", launchInWindow);
+    $launchBtn.addEventListener("click", launchWithMockLms);
     $md.addEventListener("input", debounce(renderPreview, 350));
 
     function debounce(fn, ms) { var t; return function () { clearTimeout(t); t = setTimeout(fn, ms); }; }
