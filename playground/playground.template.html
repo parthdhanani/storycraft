@@ -327,11 +327,11 @@
       // Set window.API using scorm-again so the iframe course finds it via window.parent.API.
       window.API = new window.Scorm12API({ sendFullCommit: false, lmsCommitUrl: false });
       var $lmsStatus = document.getElementById("lms-status");
-      window.API.on("Initialize", function () {
+      window.API.on("LMSInitialize", function () {
         $lmsStatus.textContent = "SCORM session active";
         $lmsStatus.style.color = "var(--ok)";
       });
-      window.API.on("Finish", function () {
+      window.API.on("LMSFinish", function () {
         $lmsStatus.textContent = "Session finished";
         $lmsStatus.style.color = "var(--dim)";
       });
