@@ -81,7 +81,7 @@
       <div class="actions">
         <button class="btn primary" id="build-btn">⤓ Build SCORM zip</button>
         <button class="btn" id="preview-btn">Preview</button>
-        <button class="btn" id="launch-btn">Launch (no LMS)</button>
+        <button class="btn" id="launch-btn">Launch with mock LMS</button>
         <span style="flex:1"></span>
         <span class="pill" id="stats">—</span>
       </div>
@@ -106,6 +106,19 @@
   <script>/*__MANIFEST__*/</script>
   <!-- runtime file payloads (base64) -->
   <script>/*__RUNTIME_FILES__*/</script>
+  <!-- Mock LMS overlay (iframe shell for scorm-again-powered preview) -->
+  <div id="launch-modal" style="display:none;position:fixed;inset:0;z-index:100;background:rgba(0,0,0,0.78);align-items:center;justify-content:center;">
+    <div style="width:min(900px,95vw);height:85vh;background:var(--panel);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;border:1px solid var(--line);">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line);gap:12px;flex-shrink:0;">
+        <span id="lms-status" style="font-size:0.82rem;color:var(--dim);">Waiting for course to connect…</span>
+        <button id="launch-close" class="btn" style="padding:5px 12px;font-size:0.8rem;">✕ Close</button>
+      </div>
+      <iframe id="launch-frame" title="Course preview" style="flex:1;border:0;background:var(--bg);"></iframe>
+    </div>
+  </div>
+
+  <!-- scorm-again by Jonathan Putney (MIT) — https://github.com/jcputney/scorm-again -->
+  <script src="https://cdn.jsdelivr.net/npm/scorm-again@3.0.5/dist/scorm12.min.js"></script>
   <!-- JSZip (vendored from CDN; falls back gracefully if blocked) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
@@ -281,16 +294,11 @@
       });
     }
 
-    function launchInWindow() {
-      var c = getCourse();
-      var errs = validate(c);
-      if (errs.length) { setStatus("Fix " + errs.length + " issue(s) first.", "err"); return; }
-
+    function buildCourseDoc(c) {
       var css = new TextDecoder().decode(decodeBase64(window.__SC_RUNTIME["player.css"]));
       var apiJs = new TextDecoder().decode(decodeBase64(window.__SC_RUNTIME["scorm12-api.js"]));
       var playerJs = new TextDecoder().decode(decodeBase64(window.__SC_RUNTIME["player.js"]));
-
-      var doc = '<!doctype html><html lang="' + c.language + '"><head><meta charset="utf-8"><title>' + escape(c.title) + '</title>' +
+      return '<!doctype html><html lang="' + c.language + '"><head><meta charset="utf-8"><title>' + escape(c.title) + '</title>' +
         '<style>' + css + '</style>' +
         '<script>window.__COURSE__ = ' + JSON.stringify(c) + ';<\/script>' +
         '</head><body>' +
@@ -301,15 +309,55 @@
         '<script>' + apiJs + '<\/script>' +
         '<script>' + playerJs + '<\/script>' +
         '</body></html>';
-
-      var blob = new Blob([doc], { type: "text/html" });
-      window.open(URL.createObjectURL(blob), "_blank");
-      setStatus("✓ Launched in a new tab — running without an LMS (SCORM calls are no-ops).", "ok");
     }
+
+    function launchWithMockLms() {
+      var c = getCourse();
+      var errs = validate(c);
+      if (errs.length) { setStatus("Fix " + errs.length + " issue(s) first.", "err"); return; }
+
+      if (typeof window.Scorm12API === "undefined") {
+        // scorm-again CDN unavailable — launch without LMS as fallback.
+        var blob0 = new Blob([buildCourseDoc(c)], { type: "text/html" });
+        window.open(URL.createObjectURL(blob0), "_blank");
+        setStatus("✓ Launched (no LMS — scorm-again CDN unavailable).", "ok");
+        return;
+      }
+
+      // Set window.API using scorm-again so the iframe course finds it via window.parent.API.
+      window.API = new window.Scorm12API({ sendFullCommit: false, lmsCommitUrl: false });
+      var $lmsStatus = document.getElementById("lms-status");
+      window.API.on("Initialize", function () {
+        $lmsStatus.textContent = "SCORM session active";
+        $lmsStatus.style.color = "var(--ok)";
+      });
+      window.API.on("Finish", function () {
+        $lmsStatus.textContent = "Session finished";
+        $lmsStatus.style.color = "var(--dim)";
+      });
+
+      var blob = new Blob([buildCourseDoc(c)], { type: "text/html" });
+      var blobUrl = URL.createObjectURL(blob);
+      $lmsStatus.textContent = "Waiting for course to connect…";
+      $lmsStatus.style.color = "var(--dim)";
+      document.getElementById("launch-frame").src = blobUrl;
+      document.getElementById("launch-modal").style.display = "flex";
+
+      setStatus("✓ Launched with scorm-again mock LMS — SCORM session tracked.", "ok");
+    }
+
+    document.getElementById("launch-close").addEventListener("click", function () {
+      var frame = document.getElementById("launch-frame");
+      var oldUrl = frame.src;
+      frame.src = "";
+      try { URL.revokeObjectURL(oldUrl); } catch (e) {}
+      document.getElementById("launch-modal").style.display = "none";
+      window.API = null;
+    });
 
     $buildBtn.addEventListener("click", buildZip);
     $previewBtn.addEventListener("click", renderPreview);
-    $launchBtn.addEventListener("click", launchInWindow);
+    $launchBtn.addEventListener("click", launchWithMockLms);
     $md.addEventListener("input", debounce(renderPreview, 350));
 
     function debounce(fn, ms) { var t; return function () { clearTimeout(t); t = setTimeout(fn, ms); }; }
